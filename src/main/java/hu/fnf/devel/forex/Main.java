@@ -1,5 +1,7 @@
 package hu.fnf.devel.forex;
 
+import hu.fnf.devel.forex.strategies.StateStrategy;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -47,16 +49,17 @@ public class Main {
 			e1.printStackTrace();
 		}
 
+		//LOGGER.debug(client.getPreferences().chart().toString());
 		client.setSystemListener(new ISystemListener() {
 
 			public void onStop(long arg0) {
 				// TODO Auto-generated method stub
-
+				System.out.println("onstop pid: " + arg0);
 			}
 
 			public void onStart(long arg0) {
 				// TODO Auto-generated method stub
-
+				System.out.println("onstart pid: " + arg0);
 			}
 
 			public void onDisconnect() {
@@ -101,11 +104,11 @@ public class Main {
 			LOGGER.error("Failed to connect Dukascopy servers");
 			System.exit(1);
 		}
-
-		Set<Instrument> instruments = new HashSet<Instrument>();
-		instruments.add(Instrument.EURUSD);
-
-		client.setSubscribedInstruments(instruments);
+//
+//		Set<Instrument> instruments = new HashSet<Instrument>();
+//		instruments.add(Instrument.EURUSD);
+//
+//		client.setSubscribedInstruments(instruments);
 
 		// workaround for LoadNumberOfCandlesAction for JForex-API versions >
 		// 2.6.64
@@ -116,38 +119,7 @@ public class Main {
 			e.printStackTrace();
 		}
 
-		client.startStrategy(new IStrategy() {
-
-			public void onTick(Instrument instrument, ITick tick) throws JFException {
-				// TODO Auto-generated method stub
-
-			}
-
-			public void onStop() throws JFException {
-				// TODO Auto-generated method stub
-
-			}
-
-			public void onStart(IContext context) throws JFException {
-				// TODO Auto-generated method stub
-				context.getConsole().getInfo().println("Started strategy");
-			}
-
-			public void onMessage(IMessage message) throws JFException {
-				// TODO Auto-generated method stub
-
-			}
-
-			public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
-				// TODO Auto-generated method stub
-
-			}
-
-			public void onAccount(IAccount account) throws JFException {
-				// TODO Auto-generated method stub
-
-			}
-		}, new IStrategyExceptionHandler() {
+		client.startStrategy(new StateStrategy(), new IStrategyExceptionHandler() {
 
 			public void onException(long strategyId, Source source, Throwable t) {
 				// TODO Auto-generated method stub
