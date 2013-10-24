@@ -1,6 +1,8 @@
 package hu.fnf.devel.forex;
 
-import hu.fnf.devel.forex.strategies.StateStrategy;
+
+import hu.fnf.devel.forex.strategies.ScalpingStrategy;
+import hu.fnf.devel.forex.strategies.Strategy;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -31,6 +33,9 @@ public class Main {
 	private static String jnlpUrl = "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
 	private static String userName = "DEMO10037hLwUqEU";
 	private static String password = "hLwUq";
+	
+	public static final int ONTICK 	= 0;
+	public static final int ONBAR 	= 1;
 
 	public static void main(String[] args) {
 		LOGGER.info("hello world");
@@ -112,17 +117,18 @@ public class Main {
 
 		// workaround for LoadNumberOfCandlesAction for JForex-API versions >
 		// 2.6.64
-		try {
-			Thread.sleep(5000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		client.startStrategy(new StateStrategy(), new IStrategyExceptionHandler() {
+//		try {
+//			Thread.sleep(5000);
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		Strategy strategies[] = { new ScalpingStrategy() };
+		client.startStrategy(new StateStrategy(strategies), new IStrategyExceptionHandler() {
 
 			public void onException(long strategyId, Source source, Throwable t) {
-				// TODO Auto-generated method stub
+				LOGGER.error("Main got error!" + t.getMessage());
+				t.printStackTrace();
 
 			}
 		});
