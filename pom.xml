@@ -5,10 +5,11 @@
 	<artifactId>forex-strategy</artifactId>
 	<version>1.0</version>
 	<name>forex-strategy</name>
+	<packaging>jar</packaging>
 	<description></description>
 	<organization>
-		<name>DUKASCOPY (Suisse) SA</name>
-		<url>http://www.dukascopy.com</url>
+		<name>FNF</name>
+		<url>http://devel.fnf.hu</url>
 	</organization>
 	<repositories>
 		<repository>
@@ -21,11 +22,137 @@
 		<dependency>
 			<groupId>com.dukascopy.dds2</groupId>
 			<artifactId>DDS2-jClient-JForex</artifactId>
+			<!-- find the latest available version here: http://www.dukascopy.com/client/jforexlib/publicrepo/com/dukascopy/dds2/DDS2-jClient-JForex/ -->
 			<version>2.27.2.1</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-jdk14</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- find the latest available version here: http://www.dukascopy.com/client/jforexlib/publicrepo/com/dukascopy/api/JForex-API/ -->
+		<dependency>
+			<groupId>com.dukascopy.api</groupId>
+			<artifactId>JForex-API</artifactId>
+			<version>2.9.3.1</version>
+			<classifier>sources</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.6.4</version>
+			<optional>true</optional>
 		</dependency>
 	</dependencies>
 	<build>
 		<sourceDirectory>src</sourceDirectory>
+		<resources>
+			<resource>
+				<directory>res</directory>
+			</resource>
+		</resources>
 		<finalName>forex-strategy</finalName>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.0</version>
+					<inherited>true</inherited>
+					<configuration>
+						<source>1.6</source>
+						<target>1.6</target>
+						<compilerArgument></compilerArgument>
+						<fork>true</fork>
+						<encoding>UTF-8</encoding>
+					</configuration>
+				</plugin>
+				<plugin>
+					<artifactId>maven-assembly-plugin</artifactId>
+					<version>2.4</version>
+					<configuration>
+						<archive>
+							<manifest>
+								<mainClass>hu.fnf.devel.forex.Main</mainClass>
+							</manifest>
+						</archive>
+						<appendAssemblyId>false</appendAssemblyId>
+						<attach>false</attach>
+						<artifactId>forex-strategy</artifactId>
+						<finalName>Main</finalName>
+						<packaging>jar</packaging>
+						<descriptors>
+							<descriptor>
+								assemblies/forex-strategy-main.xml
+							</descriptor>
+						</descriptors>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jar-plugin</artifactId>
+					<version>2.4</version>
+					<configuration>
+						<archive>
+							<manifest>
+								<mainClass>hu.fnf.devel.forex.Main</mainClass>
+							</manifest>
+						</archive>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-dependency-plugin</artifactId>
+					<version>2.5.1</version>
+					<executions>
+						<execution>
+							<id>copy-dependencies</id>
+							<phase>package</phase>
+							<goals>
+								<goal>copy-dependencies</goal>
+							</goals>
+							<configuration>
+								<includeGroupIds>log4j</includeGroupIds>
+								<outputDirectory>${project.build.directory}/dependency-jars/</outputDirectory>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 	</build>
+	<profiles>
+	    <profile>
+			<!-- Run with mvn assembly:assembly -P Main to build the OrderTableSdk.jar, which contains all JForex-SDK
+				dependencies
+				then run it from console with java -jar target\OrderTableSdk.jar -->
+			<id>Main</id>
+			<build>
+				<plugins>
+					<plugin>
+						<artifactId>maven-assembly-plugin</artifactId>
+						<version>2.4</version>
+						<configuration>
+							<archive>	
+								<manifest>
+									<mainClass>hu.fnf.devel.forex.Main</mainClass>
+								</manifest>
+							</archive>
+							<appendAssemblyId>false</appendAssemblyId>
+							<attach>false</attach>
+							<artifactId>forex-strategy-main</artifactId>
+							<finalName>Main</finalName>
+							<packaging>jar</packaging>
+							<descriptors>
+								<descriptor>
+									assemblies/forex-strategy-main.xml
+								</descriptor>
+							</descriptors>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	    
+	</profiles>
 </project>
