@@ -20,31 +20,27 @@ import com.dukascopy.api.Instrument;
 import com.dukascopy.api.JFException;
 import com.dukascopy.api.Period;
 
-public class StateStrategy extends State implements IStrategy{
-    private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
+public class StateStrategy implements IStrategy {
+	private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
 
 	private static StateStrategy instance = null;
 
-	private hu.fnf.devel.forex.states.State state;	
-	private Set<Strategy> strategies ;
+	private hu.fnf.devel.forex.states.State state;
+	private Set<Strategy> strategies = new HashSet<Strategy>();
 
-	private StateStrategy(Set<Strategy> strategies) {
-		this.strategies = strategies;
-	}
-	
-	public static synchronized StateStrategy getInstance(Set<Strategy> strategies) {
-		if ( instance == null ) {
-			instance = new StateStrategy(strategies);
+	public static synchronized StateStrategy getInstance() {
+		if (instance == null) {
+			instance = new StateStrategy();
 		}
 		return instance;
 	}
 
 	public void setState(hu.fnf.devel.forex.states.State state) {
-		if ( this.state != state ) {
+		if (this.state != state) {
 			this.state = state;
 		}
 	}
-	
+
 	public hu.fnf.devel.forex.states.State getState() {
 		return state;
 	}
@@ -57,7 +53,11 @@ public class StateStrategy extends State implements IStrategy{
 		/*
 		 * return new ScalpHolderState(new ScalpingStrategy());
 		 */
-		return new SignalSeekerState(strategies, this);
+		SignalSeekerState signalSeekerState = new SignalSeekerState(this);
+		for (Strategy s : strategies) {
+			signalSeekerState.addStrategy(s);
+		}
+		return signalSeekerState;
 	}
 
 	@Override
@@ -66,57 +66,29 @@ public class StateStrategy extends State implements IStrategy{
 		this.state = recignizeState(strategies);
 
 		Set<Instrument> instruments = new HashSet<Instrument>();
-		for ( Strategy s: strategies ) {
-			for ( Instrument i: s.getInstruments() ) {
+		for (Strategy s : strategies) {
+			for (Instrument i : s.getInstruments()) {
 				instruments.add(i);
 			}
 		}
 		context.setSubscribedInstruments(instruments);
 	}
-	
+
 	/*
 	 * Action
 	 */
-	
-	
+
 	@Override
 	public void onTick(Instrument instrument, ITick tick) throws JFException {
-		//this.state.transaction(instrument, tick);
+		// this.state.transaction(instrument, tick);
 	}
 
 	@Override
 	public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
 		this.state.transaction(instrument, period, askBar, bidBar);
+
 	}
 
-	@Override
-	public void transaction(Instrument instrument, ITick tick) {
-		setState(new SignalSeekerState(strategies, this));
-	}
-
-	@Override
-	public void transaction(Instrument instrument, Period period, IBar askBar, IBar bidBar) {
-		setState(new SignalSeekerState(strategies, this));
-	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 	@Override
 	public void onMessage(IMessage message) throws JFException {
 		// TODO Auto-generated method stub
@@ -135,6 +107,8 @@ public class StateStrategy extends State implements IStrategy{
 
 	}
 
-
+	public void addStrategy(Strategy strategy) {
+		strategies.add(strategy);
+	}
 
 }

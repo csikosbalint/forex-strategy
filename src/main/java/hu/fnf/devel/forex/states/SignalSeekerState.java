@@ -1,6 +1,5 @@
 package hu.fnf.devel.forex.states;
 
-import hu.fnf.devel.forex.Main;
 import hu.fnf.devel.forex.StateStrategy;
 import hu.fnf.devel.forex.strategies.BarStrategy;
 import hu.fnf.devel.forex.strategies.Strategy;
@@ -9,29 +8,35 @@ import hu.fnf.devel.forex.strategies.TickStrategy;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.dukascopy.api.IBar;
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
 import com.dukascopy.api.Period;
 
 public class SignalSeekerState extends State {
+	private static final Logger LOGGER = LoggerFactory.getLogger(SignalSeekerState.class);
+
 	Set<TickStrategy> onTickStrategies = new HashSet<TickStrategy>();
 	Set<BarStrategy> onBarStrategies = new HashSet<BarStrategy>();
 
-	public SignalSeekerState(Set<Strategy> strategies, StateStrategy stateStrategy) {
-		this.stateStrategy = stateStrategy;
-		for (Strategy s : strategies) {
-			if (s instanceof BarStrategy) {
-				this.onBarStrategies.add((BarStrategy) s);
-			} else if (s instanceof TickStrategy) {
-				this.onTickStrategies.add((TickStrategy) s);
-			}
+	public SignalSeekerState(StateStrategy stateStrategy) {
+		this.stateMachine = stateStrategy;
+	}
+	
+	public void addStrategy(Strategy strategy) {
+		if ( strategy instanceof BarStrategy ) {
+			onBarStrategies.add((BarStrategy) strategy );
+		} else if ( strategy instanceof TickStrategy ) {
+			onTickStrategies.add((TickStrategy) strategy );
 		}
 	}
 
 	@Override
 	public void transaction(Instrument instrument, ITick tick) {
-		Main.LOGGER.info("SignalSeekerState tick transaction");
+		LOGGER.info("SignalSeekerState tick transaction");
 		int max = 0;
 		TickStrategy bestStrategy = null;
 		for (TickStrategy s : onTickStrategies) {
@@ -43,27 +48,29 @@ public class SignalSeekerState extends State {
 			}
 		}
 		if ( bestStrategy != null ) {
-			Main.LOGGER.info("...selected strategy: " + bestStrategy.getName());
-			stateStrategy.setState(bestStrategy.onStart(instrument, tick));
+			LOGGER.info("...selected strategy: " + bestStrategy.getName());
+			stateMachine.setState(bestStrategy.onStart(instrument, tick));
 		}
 	}
 
 	@Override
 	public void transaction(Instrument instrument, Period period, IBar askBar, IBar bidBar) {
-		Main.LOGGER.info("SignalSeekerState bar transaction");
+		LOGGER.info("SignalSeekerState bar transaction " + instrument.name() + " " + period.getInterval());
 		int max = 0;
 		BarStrategy bestStrategy = null;
 		for (BarStrategy s : onBarStrategies) {
 			// TODO: thread and singleton pattern
 			int signal = s.signalStrength(instrument, period, askBar, bidBar);
+			LOGGER.debug(s.getName() + " signal strength: " + signal);
 			if (signal > max) {
 				max = signal;
 				bestStrategy = s;
+				LOGGER.debug(s.getName() + " is the new max with " + signal);
 			}
 		}
 		if ( bestStrategy != null ) {
-			stateStrategy.setState(bestStrategy.onStart(instrument, period, askBar, bidBar));
-			Main.LOGGER.info("new state?");
+			LOGGER.info("...selected strategy: " + bestStrategy.getName());
+			stateMachine.setState(bestStrategy.onStart(instrument, period, askBar, bidBar));
 		}
 	}
 }

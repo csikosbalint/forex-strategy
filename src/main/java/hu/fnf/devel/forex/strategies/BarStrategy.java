@@ -7,7 +7,7 @@ import com.dukascopy.api.Instrument;
 import com.dukascopy.api.Period;
 
 public abstract class BarStrategy extends Strategy {
-	public abstract int signalStrength(Instrument instrument, Period period, IBar askBar, IBar bidBar);
+	abstract public int signalStrength(Instrument instrument, Period period, IBar askBar, IBar bidBar);
 	abstract public State onStart(Instrument instrument, Period period, IBar askBar, IBar bidBar);
 	abstract public State onStop();
 }

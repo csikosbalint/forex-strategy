@@ -1,6 +1,8 @@
 package hu.fnf.devel.forex.strategies;
 
-import hu.fnf.devel.forex.Main;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import hu.fnf.devel.forex.StateStrategy;
 import hu.fnf.devel.forex.states.ScalpHolderState;
 import hu.fnf.devel.forex.states.State;
@@ -10,11 +12,12 @@ import com.dukascopy.api.Instrument;
 import com.dukascopy.api.Period;
 
 public class ScalpingStrategy extends BarStrategy {
+	private static final Logger LOGGER = LoggerFactory.getLogger(ScalpingStrategy.class);
+
 
 	@Override
 	public int signalStrength(Instrument instrument, Period period, IBar askBar, IBar bidBar) {
-		// TODO Auto-generated method stub
-		return 0;
+		return 1;
 	}
 
 	@Override
@@ -22,12 +25,16 @@ public class ScalpingStrategy extends BarStrategy {
 		/*
 		 * calculation
 		 */
-		Main.LOGGER.info("...calculation...");
+		LOGGER.info("...calculation...");
 		/*
 		 * open order
 		 */
-		Main.LOGGER.info("...operations...");
-		return new ScalpHolderState(this);
+		LOGGER.info("...operations...");
+		ScalpHolderState scalpState = new ScalpHolderState(StateStrategy.getInstance());
+		scalpState.addStrategy(this);
+		scalpState.setInstrument(instrument);
+		scalpState.setPeriod(period);
+		return scalpState;
 	}
 
 	@Override

@@ -1,17 +1,13 @@
 package hu.fnf.devel.forex;
 
-
-import java.util.HashSet;
-import java.util.Set;
-
 import hu.fnf.devel.forex.strategies.ScalpingStrategy;
 import hu.fnf.devel.forex.strategies.Strategy;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.dukascopy.api.IStrategy;
 import com.dukascopy.api.Instrument;
+import com.dukascopy.api.Period;
 import com.dukascopy.api.system.ClientFactory;
 import com.dukascopy.api.system.IClient;
 import com.dukascopy.api.system.ISystemListener;
@@ -20,13 +16,11 @@ import com.dukascopy.api.system.JFVersionException;
 
 public class Main {
 
-	public static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
 
 	private static String jnlpUrl = "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
 	private static String userName = "DEMO10037hLwUqEU";
 	private static String password = "hLwUq";
-	
-	public static Set<Strategy> strategies;
 
 	public static void main(String[] args) {
 		LOGGER.info("hello world");
@@ -100,11 +94,6 @@ public class Main {
 			LOGGER.error("Failed to connect Dukascopy servers");
 			System.exit(1);
 		}
-//
-//		Set<Instrument> instruments = new HashSet<Instrument>();
-//		instruments.add(Instrument.EURUSD);
-//
-//		client.setSubscribedInstruments(instruments);
 
 		// workaround for LoadNumberOfCandlesAction for JForex-API versions >
 		// 2.6.64
@@ -118,17 +107,17 @@ public class Main {
 		/*
 		 * strategies
 		 */
-		strategies = new HashSet<Strategy>();
 		Strategy s1 = new ScalpingStrategy();
 		s1.addInstrument(Instrument.EURUSD);
-		s1.addInstrument(Instrument.EURJPY);
-		s1.addInstrument(Instrument.GBPJPY);
+		s1.addPeriod(Period.FIVE_MINS);
+		//s1.addInstrument(Instrument.EURJPY);
+		//s1.addInstrument(Instrument.GBPJPY);
 		
-		strategies.add(s1);
 		// singleton 
-		StateStrategy stateStrategy = StateStrategy.getInstance(strategies);
+		StateStrategy stateStrategy = StateStrategy.getInstance();
+		stateStrategy.addStrategy(s1);
+		
 		client.startStrategy(stateStrategy);
-		LOGGER.info("DONE");
 		
 	}
 }

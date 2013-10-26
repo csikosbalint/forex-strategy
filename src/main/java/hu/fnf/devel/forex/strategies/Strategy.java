@@ -6,15 +6,21 @@ import java.util.Set;
 import com.dukascopy.api.IContext;
 import com.dukascopy.api.IOrder;
 import com.dukascopy.api.Instrument;
+import com.dukascopy.api.Period;
 
 public abstract class Strategy {
 	protected Set<Instrument> instruments = new HashSet<Instrument>();
+	protected Set<Period> periods = new HashSet<Period>();
 	protected IContext context;
 	
 	abstract public String getName();
 
 	public void addInstrument(Instrument instrument) {
 		instruments.add(instrument);
+	}
+	
+	public void addPeriod(Period period) {
+		periods.add(period);
 	}
 	
 	public void setContext(IContext context) {
@@ -29,6 +35,10 @@ public abstract class Strategy {
 		return instruments;
 	}
 
+	public Set<Period> getPeriods() {
+		return periods;
+	}
+
 	/*
 	 * common calculations
 	 */
@@ -36,5 +46,7 @@ public abstract class Strategy {
 		return 0;
 
 	}
+
+	
 
 }
