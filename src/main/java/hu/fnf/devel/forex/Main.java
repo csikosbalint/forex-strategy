@@ -1,6 +1,6 @@
 package hu.fnf.devel.forex;
 
-import hu.fnf.devel.forex.strategies.ScalpingStrategy;
+import hu.fnf.devel.forex.strategies.Scalping7Strategy;
 import hu.fnf.devel.forex.strategies.Strategy;
 
 import org.slf4j.Logger;
@@ -23,7 +23,6 @@ public class Main {
 	private static String password = "hLwUq";
 
 	public static void main(String[] args) {
-		LOGGER.info("hello world");
 		IClient client = null;
 
 		try {
@@ -44,12 +43,10 @@ public class Main {
 
 			public void onStop(long arg0) {
 				// TODO Auto-generated method stub
-				System.out.println("onstop pid: " + arg0);
 			}
 
 			public void onStart(long arg0) {
 				// TODO Auto-generated method stub
-				System.out.println("onstart pid: " + arg0);
 			}
 
 			public void onDisconnect() {
@@ -83,7 +80,7 @@ public class Main {
 		int i = 10; // wait max ten seconds
 		while (i > 0 && !client.isConnected()) {
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(2000);
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -98,7 +95,7 @@ public class Main {
 		// workaround for LoadNumberOfCandlesAction for JForex-API versions >
 		// 2.6.64
 		try {
-			Thread.sleep(5000);
+			Thread.sleep(15000);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -107,11 +104,14 @@ public class Main {
 		/*
 		 * strategies
 		 */
-		Strategy s1 = new ScalpingStrategy();
-		s1.addInstrument(Instrument.EURUSD);
+		Strategy s1 = new Scalping7Strategy();
+		//s1.addInstrument(Instrument.EURUSD);
+		s1.addInstrument(Instrument.EURJPY);
+		s1.addInstrument(Instrument.GBPJPY);
+		
+		s1.addPeriod(Period.ONE_MIN);
 		s1.addPeriod(Period.FIVE_MINS);
-		//s1.addInstrument(Instrument.EURJPY);
-		//s1.addInstrument(Instrument.GBPJPY);
+		s1.addPeriod(Period.FIFTEEN_MINS);
 		
 		// singleton 
 		StateStrategy stateStrategy = StateStrategy.getInstance();

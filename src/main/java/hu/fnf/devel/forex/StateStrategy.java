@@ -23,26 +23,34 @@ import com.dukascopy.api.Period;
 public class StateStrategy implements IStrategy {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
 
-	private static StateStrategy instance = null;
+	private static StateStrategy instance;
+	private static State state;
+	private Set<Strategy> strategies;
+	private IContext context;
 
-	private hu.fnf.devel.forex.states.State state;
-	private Set<Strategy> strategies = new HashSet<Strategy>();
-
-	public static synchronized StateStrategy getInstance() {
+	// synchronized if needed
+	public static StateStrategy getInstance() {
 		if (instance == null) {
 			instance = new StateStrategy();
 		}
 		return instance;
 	}
 
-	public void setState(hu.fnf.devel.forex.states.State state) {
-		if (this.state != state) {
-			this.state = state;
+	/*
+	 * THREAD SAFE!!!
+	 */
+	public static synchronized void setState(State state) {
+		if (StateStrategy.state == null && StateStrategy.state.isAllowed(state) ) {
+			StateStrategy.state = state;
 		}
 	}
 
-	public hu.fnf.devel.forex.states.State getState() {
+	public State getState() {
 		return state;
+	}
+
+	public IContext getContext() {
+		return context;
 	}
 
 	private State recignizeState(Set<Strategy> strategies) {
@@ -53,7 +61,7 @@ public class StateStrategy implements IStrategy {
 		/*
 		 * return new ScalpHolderState(new ScalpingStrategy());
 		 */
-		SignalSeekerState signalSeekerState = new SignalSeekerState(this);
+		SignalSeekerState signalSeekerState = new SignalSeekerState();
 		for (Strategy s : strategies) {
 			signalSeekerState.addStrategy(s);
 		}
@@ -62,13 +70,16 @@ public class StateStrategy implements IStrategy {
 
 	@Override
 	public void onStart(IContext context) throws JFException {
-		LOGGER.info("onStart");
-		this.state = recignizeState(strategies);
-
+		this.context = context;
+		LOGGER.debug("state recognition...");
+		StateStrategy.state = recignizeState(strategies);
+		LOGGER.info("recognized state is " + state.getName());
 		Set<Instrument> instruments = new HashSet<Instrument>();
+		LOGGER.info("subscribing to instruments:");
 		for (Strategy s : strategies) {
 			for (Instrument i : s.getInstruments()) {
-				instruments.add(i);
+				instruments.add(i); // no duplicate
+				LOGGER.info("\t*" + i.name() + "(" + s.getName() + ")");
 			}
 		}
 		context.setSubscribedInstruments(instruments);
@@ -85,8 +96,7 @@ public class StateStrategy implements IStrategy {
 
 	@Override
 	public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
-		this.state.transaction(instrument, period, askBar, bidBar);
-
+		StateStrategy.state.transaction(instrument, period, askBar, bidBar);
 	}
 
 	@Override
@@ -108,6 +118,9 @@ public class StateStrategy implements IStrategy {
 	}
 
 	public void addStrategy(Strategy strategy) {
+		if (strategies == null) {
+			strategies = new HashSet<Strategy>();
+		}
 		strategies.add(strategy);
 	}
 
