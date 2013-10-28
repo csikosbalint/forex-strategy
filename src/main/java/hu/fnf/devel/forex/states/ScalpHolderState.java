@@ -1,9 +1,8 @@
 package hu.fnf.devel.forex.states;
 
-import java.util.Random;
-
 import hu.fnf.devel.forex.StateStrategy;
 import hu.fnf.devel.forex.strategies.BarStrategy;
+import hu.fnf.devel.forex.strategies.TickStrategy;
 
 import com.dukascopy.api.IBar;
 import com.dukascopy.api.ITick;
@@ -18,6 +17,18 @@ public class ScalpHolderState extends State {
 
 	@Override
 	public void transaction(Instrument instrument, ITick tick) {
+		if (!instrument.equals(this.getInstrument()) ){ 
+	         return; 
+	     }
+		LOGGER.info(strategy.getName() + " tick transaction " + instrument.name() + " " + period.getInterval() );
+		/*
+		 * is close signal?
+		 */
+		if ( ((TickStrategy) strategy).signalStrength(instrument, tick).getStrength() > 0 ) {
+			StateStrategy.setState(((TickStrategy) strategy).onStop());
+		} else {
+			LOGGER.debug("still in state " + getName());
+		}
 	}
 
 	@Override
@@ -29,7 +40,7 @@ public class ScalpHolderState extends State {
 		/*
 		 * is close signal?
 		 */
-		if ( ((BarStrategy) strategy).signalStrength(instrument, period, askBar, bidBar).getSignal() > 0 ) {
+		if ( ((BarStrategy) strategy).signalStrength(instrument, period, askBar, bidBar).getStrength() > 0 ) {
 			StateStrategy.setState(((BarStrategy) strategy).onStop());
 		} else {
 			LOGGER.debug("still in state " + getName());

@@ -1,6 +1,7 @@
 package hu.fnf.devel.forex.strategies;
 
 import hu.fnf.devel.forex.StateStrategy;
+import hu.fnf.devel.forex.states.State;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -15,6 +16,7 @@ public abstract class Strategy {
 	protected Set<Period> periods = new HashSet<Period>();
 
 	abstract public String getName();
+	abstract public State onStop();
 
 	public void addInstrument(Instrument instrument) {
 		instruments.add(instrument);

@@ -89,7 +89,8 @@ public class Main {
 		}
 		if (!client.isConnected()) {
 			LOGGER.error("Failed to connect Dukascopy servers");
-			System.exit(1);
+			client.reconnect();
+			//System.exit(1);
 		}
 
 		// workaround for LoadNumberOfCandlesAction for JForex-API versions >
@@ -110,8 +111,8 @@ public class Main {
 		s1.addInstrument(Instrument.GBPJPY);
 		
 		s1.addPeriod(Period.ONE_MIN);
-		s1.addPeriod(Period.FIVE_MINS);
-		s1.addPeriod(Period.FIFTEEN_MINS);
+		//s1.addPeriod(Period.FIVE_MINS);
+		//s1.addPeriod(Period.FIFTEEN_MINS);
 		
 		// singleton 
 		StateStrategy stateStrategy = StateStrategy.getInstance();

@@ -33,7 +33,31 @@ public class SignalSeekerState extends State {
 
 	@Override
 	public void transaction(Instrument instrument, ITick tick) {
+		TickStrategy bestStrategy = null;
+		Signal bestSignal = null;
+		for (TickStrategy s : onTickStrategies) {
+			LOGGER.debug("checking " + s.getName());
+			for (Instrument i : s.getInstruments()) {
+				if (instrument == i) {
+					// TODO: thread and singleton pattern
+					Signal signal = s.signalStrength(instrument, tick);
+					LOGGER.debug(s.getName() + " signal strength: " + signal.getStrength());
+					int max = 0;
+					if (signal.getStrength() > max) {
+						max = signal.getStrength();
+						bestStrategy = s;
+						bestSignal = signal;
+						LOGGER.debug(s.getName() + " is the new max with " + signal.getStrength());
+					}
+				}
 
+			}
+		}
+		if (bestStrategy != null) {
+			LOGGER.info("selected strategy is " + bestStrategy.getName() + " with " + bestSignal.getStrength()
+					+ " strength(" + bestSignal.getType().name() + ")");
+			StateStrategy.setState(bestStrategy.onStart(instrument, tick, bestSignal));
+		}
 	}
 
 	@Override
@@ -47,13 +71,13 @@ public class SignalSeekerState extends State {
 						if (instrument == i) {
 							// TODO: thread and singleton pattern
 							Signal signal = s.signalStrength(instrument, period, askBar, bidBar);
-							LOGGER.debug(s.getName() + " signal strength: " + signal);
+							LOGGER.debug(s.getName() + " signal strength: " + signal.getStrength());
 							int max = 0;
-							if (signal.getSignal() > max) {
-								max = signal.getSignal();
+							if (signal.getStrength() > max) {
+								max = signal.getStrength();
 								bestStrategy = s;
 								bestSignal = signal;
-								LOGGER.debug(s.getName() + " is the new max with " + signal.getSignal());
+								LOGGER.debug(s.getName() + " is the new max with " + signal.getStrength());
 							}
 						}
 					}
@@ -61,7 +85,7 @@ public class SignalSeekerState extends State {
 			}
 		}
 		if (bestStrategy != null) {
-			LOGGER.info("selected strategy is " + bestStrategy.getName() + " with " + bestSignal.getSignal()
+			LOGGER.info("selected strategy is " + bestStrategy.getName() + " with " + bestSignal.getStrength()
 					+ " strength(" + bestSignal.getType().name() + ")");
 			StateStrategy.setState(bestStrategy.onStart(instrument, period, askBar, bidBar, bestSignal));
 		}

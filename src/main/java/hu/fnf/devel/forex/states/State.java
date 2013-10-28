@@ -3,7 +3,6 @@ package hu.fnf.devel.forex.states;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import hu.fnf.devel.forex.StateStrategy;
 import hu.fnf.devel.forex.strategies.Strategy;
 
 import com.dukascopy.api.IBar;
@@ -21,7 +20,7 @@ public abstract class State {
 	
 	public State(String name) {
 		this.name = name;
-		LOGGER.info("new " + getName());
+		LOGGER.debug("new " + getName());
 	}
 
 	public abstract String getName();
@@ -59,12 +58,13 @@ public abstract class State {
 	}
 
 	public boolean isAllowed(State state) {
-		if ( this == state && this instanceof SignalSeekerState ) {
-			return false;
-		} else {
-			// TODO: IMPORTANT! Only with 1 strategy works this! Plan it!
-			return true;
-		}
+		return true;
+//		if ( this == state && this instanceof SignalSeekerState ) {
+//			return false;
+//		} else {
+//			// TODO: IMPORTANT! Only with 1 strategy works this! Plan it!
+//			return true;
+//		}
 	}
 
 

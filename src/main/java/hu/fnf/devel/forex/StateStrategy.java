@@ -35,12 +35,14 @@ public class StateStrategy implements IStrategy {
 		}
 		return instance;
 	}
-
 	/*
 	 * THREAD SAFE!!!
 	 */
 	public static synchronized void setState(State state) {
-		if (StateStrategy.state == null && StateStrategy.state.isAllowed(state) ) {
+		LOGGER.debug("received state for setState is " + state.getName() + ". Actual state is "
+				+ StateStrategy.state.getName());
+		if (StateStrategy.state != null && StateStrategy.state.isAllowed(state)) {
+			LOGGER.info("state change: " + StateStrategy.state.getName() + " -> " + state.getName());
 			StateStrategy.state = state;
 		}
 	}
@@ -53,6 +55,9 @@ public class StateStrategy implements IStrategy {
 		return context;
 	}
 
+	public Set<Strategy> getStrategies() {
+		return strategies;
+	}
 	private State recignizeState(Set<Strategy> strategies) {
 		// TODO: recognize states
 		/*
@@ -91,12 +96,16 @@ public class StateStrategy implements IStrategy {
 
 	@Override
 	public void onTick(Instrument instrument, ITick tick) throws JFException {
-		// this.state.transaction(instrument, tick);
+		LOGGER.debug(StateStrategy.state.getName() + " tick " + instrument.name() );
+		StateStrategy.state.transaction(instrument, tick);
+		
 	}
 
 	@Override
 	public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
-		StateStrategy.state.transaction(instrument, period, askBar, bidBar);
+		//LOGGER.debug(StateStrategy.state.getName() + " onBar tick " + instrument.name() + "/" + period.getInterval());
+		
+		//StateStrategy.state.transaction(instrument, period, askBar, bidBar);
 	}
 
 	@Override
