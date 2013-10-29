@@ -3,20 +3,20 @@ package hu.fnf.devel.forex;
 import com.dukascopy.api.IEngine.OrderCommand;
 
 public class Signal {
-	private int strength;
+	private int value;
 	private OrderCommand type;
 
 	public Signal() {
-		strength = 0;
+		value = 0;
 		type = null;
 	}
 
-	public int getStrength() {
-		return strength;
+	public int getValue() {
+		return value;
 	}
 
-	public void setStrength(int signal) {
-		this.strength = signal;
+	public void setValue(int signal) {
+		this.value = signal;
 	}
 
 	public OrderCommand getType() {

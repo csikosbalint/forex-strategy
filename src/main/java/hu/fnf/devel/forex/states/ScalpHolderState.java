@@ -1,6 +1,6 @@
 package hu.fnf.devel.forex.states;
 
-import hu.fnf.devel.forex.StateStrategy;
+import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.strategies.BarStrategy;
 import hu.fnf.devel.forex.strategies.TickStrategy;
 
@@ -17,15 +17,16 @@ public class ScalpHolderState extends State {
 
 	@Override
 	public void transaction(Instrument instrument, ITick tick) {
-		if (!instrument.equals(this.getInstrument()) ){ 
-	         return; 
-	     }
-		LOGGER.info(strategy.getName() + " tick transaction " + instrument.name() + " " + period.getInterval() );
+		if (!instrument.equals(this.getInstrument())) {
+			return;
+		}
+		LOGGER.info(strategy.getName() + " tick transaction " + instrument.name() + " " + period.getInterval()
+				+ " and orders " +StateMachine.getInstance().getOrders().size() + " pointer " + StateMachine.getInstance().getOrders().toString());
 		/*
 		 * is close signal?
 		 */
-		if ( ((TickStrategy) strategy).signalStrength(instrument, tick).getStrength() > 0 ) {
-			StateStrategy.setState(((TickStrategy) strategy).onStop());
+		if (((TickStrategy) strategy).signalStrength(instrument, tick).getValue() > 0) {
+			StateMachine.setState(((TickStrategy) strategy).onStop());
 		} else {
 			LOGGER.debug("still in state " + getName());
 		}
@@ -33,15 +34,15 @@ public class ScalpHolderState extends State {
 
 	@Override
 	public void transaction(Instrument instrument, Period period, IBar askBar, IBar bidBar) {
-		if (!instrument.equals(this.getInstrument()) || !period.equals(this.getPeriod())){ 
-	         return; 
-	     }
-		LOGGER.info(strategy.getName() + " bar transaction " + instrument.name() + " " + period.getInterval() );
+		if (!instrument.equals(this.getInstrument()) || !period.equals(this.getPeriod())) {
+			return;
+		}
+		LOGGER.info(strategy.getName() + " bar transaction " + instrument.name() + " " + period.getInterval());
 		/*
 		 * is close signal?
 		 */
-		if ( ((BarStrategy) strategy).signalStrength(instrument, period, askBar, bidBar).getStrength() > 0 ) {
-			StateStrategy.setState(((BarStrategy) strategy).onStop());
+		if (((BarStrategy) strategy).signalStrength(instrument, period, askBar, bidBar).getValue() > 0) {
+			StateMachine.setState(((BarStrategy) strategy).onStop());
 		} else {
 			LOGGER.debug("still in state " + getName());
 		}

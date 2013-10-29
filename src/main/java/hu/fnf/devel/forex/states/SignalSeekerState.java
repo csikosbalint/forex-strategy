@@ -1,7 +1,7 @@
 package hu.fnf.devel.forex.states;
 
 import hu.fnf.devel.forex.Signal;
-import hu.fnf.devel.forex.StateStrategy;
+import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.strategies.BarStrategy;
 import hu.fnf.devel.forex.strategies.Strategy;
 import hu.fnf.devel.forex.strategies.TickStrategy;
@@ -40,23 +40,25 @@ public class SignalSeekerState extends State {
 			for (Instrument i : s.getInstruments()) {
 				if (instrument == i) {
 					// TODO: thread and singleton pattern
+					// TODO: we are passing a reference than create a new state
+					// and destroy this but we expect the same reference ?!
 					Signal signal = s.signalStrength(instrument, tick);
-					LOGGER.debug(s.getName() + " signal strength: " + signal.getStrength());
+					LOGGER.debug(s.getName() + " signal strength: " + signal.getValue());
 					int max = 0;
-					if (signal.getStrength() > max) {
-						max = signal.getStrength();
+					if (signal.getValue() > max) {
+						max = signal.getValue();
 						bestStrategy = s;
 						bestSignal = signal;
-						LOGGER.debug(s.getName() + " is the new max with " + signal.getStrength());
+						LOGGER.debug(s.getName() + " is the new max with " + signal.getValue());
 					}
 				}
 
 			}
 		}
 		if (bestStrategy != null) {
-			LOGGER.info("selected strategy is " + bestStrategy.getName() + " with " + bestSignal.getStrength()
+			LOGGER.info("selected strategy is " + bestStrategy.getName() + " with " + bestSignal.getValue()
 					+ " strength(" + bestSignal.getType().name() + ")");
-			StateStrategy.setState(bestStrategy.onStart(instrument, tick, bestSignal));
+			StateMachine.setState(bestStrategy.onStart(instrument, tick, bestSignal));
 		}
 	}
 
@@ -71,13 +73,13 @@ public class SignalSeekerState extends State {
 						if (instrument == i) {
 							// TODO: thread and singleton pattern
 							Signal signal = s.signalStrength(instrument, period, askBar, bidBar);
-							LOGGER.debug(s.getName() + " signal strength: " + signal.getStrength());
+							LOGGER.debug(s.getName() + " signal strength: " + signal.getValue());
 							int max = 0;
-							if (signal.getStrength() > max) {
-								max = signal.getStrength();
+							if (signal.getValue() > max) {
+								max = signal.getValue();
 								bestStrategy = s;
 								bestSignal = signal;
-								LOGGER.debug(s.getName() + " is the new max with " + signal.getStrength());
+								LOGGER.debug(s.getName() + " is the new max with " + signal.getValue());
 							}
 						}
 					}
@@ -85,9 +87,9 @@ public class SignalSeekerState extends State {
 			}
 		}
 		if (bestStrategy != null) {
-			LOGGER.info("selected strategy is " + bestStrategy.getName() + " with " + bestSignal.getStrength()
+			LOGGER.info("selected strategy is " + bestStrategy.getName() + " with " + bestSignal.getValue()
 					+ " strength(" + bestSignal.getType().name() + ")");
-			StateStrategy.setState(bestStrategy.onStart(instrument, period, askBar, bidBar, bestSignal));
+			StateMachine.setState(bestStrategy.onStart(instrument, period, askBar, bidBar, bestSignal));
 		}
 	}
 

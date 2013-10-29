@@ -1,14 +1,10 @@
 package hu.fnf.devel.forex.strategies;
 
 import hu.fnf.devel.forex.Signal;
-import hu.fnf.devel.forex.StateStrategy;
+import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.states.ScalpHolderState;
 import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.states.State;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,16 +33,16 @@ public class Scalping7Strategy extends TickStrategy {
 	}
 
 	@Override
-	public Signal signalStrength(Instrument instrument, ITick tick, List<IOrder> orders) {
-		IContext context = StateStrategy.getInstance().getContext();
+	public Signal signalStrength(Instrument instrument, ITick tick) {
+		IContext context = StateMachine.getInstance().getContext();
 		Signal ret = new Signal();
-		ret.setStrength(0);
+		ret.setValue(0);
 		// TODO: in this point anomailes have to be handeled
-		
-		LOGGER.debug("signalStrength calculation myOrders.size: " + orders.size() + " totalOrders: "
-				+ totalOrders(IOrder.State.FILLED));
-		
-		if (orders.size() == 0 && totalOrders(IOrder.State.FILLED) == 0) {
+
+		LOGGER.debug("signalStrength calculation myOrders.size: " + StateMachine.getInstance().getOrders().size()
+				+ " totalOrders: " + totalOrders(IOrder.State.FILLED));
+
+		if (totalOrders(null) == 0) {
 			/*
 			 * buy strategy
 			 */
@@ -64,9 +60,9 @@ public class Scalping7Strategy extends TickStrategy {
 					LOGGER.info("\tred: " + red[red.length - 1] + "\t>\task: " + tick.getAsk());
 					ret.setType(OrderCommand.BUY);
 					if (tick.getAsk() < orange[orange.length - 1]) {
-						ret.setStrength(2);
+						ret.setValue(2);
 					} else {
-						ret.setStrength(1);
+						ret.setValue(1);
 					}
 				} else {
 					LOGGER.debug("No buy:\tred: " + red[red.length - 1] + " > ask: " + tick.getAsk());
@@ -92,9 +88,9 @@ public class Scalping7Strategy extends TickStrategy {
 					LOGGER.info("\tred: " + red[2] + " < ask: " + tick.getBid());
 					ret.setType(OrderCommand.SELL);
 					if (tick.getBid() > orange[orange.length - 1]) {
-						ret.setStrength(2);
+						ret.setValue(2);
 					} else {
-						ret.setStrength(1);
+						ret.setValue(1);
 					}
 				} else {
 					LOGGER.debug("No sell:\tred: " + red[2] + " < ask: " + tick.getBid());
@@ -103,7 +99,7 @@ public class Scalping7Strategy extends TickStrategy {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			LOGGER.debug("retval is " + ret.getType() + "(" + ret.getStrength() + ")");
+			LOGGER.debug("retval is " + ret.getType() + "(" + ret.getValue() + ")");
 			return ret;
 		} else {
 			/*
@@ -112,26 +108,28 @@ public class Scalping7Strategy extends TickStrategy {
 			/*
 			 * close strategy
 			 */
-			if (orders.get(0).getProfitLossInPips() > range * 0.6) {
-				LOGGER.info("close!\tpip for " + orders.get(0).getId() + ": " + orders.get(0).getProfitLossInPips());
-				ret.setStrength(1);
+			if (StateMachine.getInstance().getOrders().get(0).getProfitLossInPips() > range * 0.6) {
+				LOGGER.info("close!\tpip for " + StateMachine.getInstance().getOrders().get(0).getId() + ": "
+						+ StateMachine.getInstance().getOrders().get(0).getProfitLossInPips());
+				ret.setValue(1);
 				// TODO: self type for openning and closing
 				ret.setType(null);
-			} else if (orders.get(0).getProfitLossInPips() < -1 * range * 0.3 ) {
-				LOGGER.info("close!\tpip for " + orders.get(0).getId() + ": " + orders.get(0).getProfitLossInPips());
-				ret.setStrength(1);
+			} else if (StateMachine.getInstance().getOrders().get(0).getProfitLossInPips() < -1 * range * 0.3) {
+				LOGGER.info("close!\tpip for " + StateMachine.getInstance().getOrders().get(0).getId() + ": "
+						+ StateMachine.getInstance().getOrders().get(0).getProfitLossInPips());
+				ret.setValue(1);
 				// TODO: self type for openning and closing
 				ret.setType(null);
 			} else {
-				LOGGER.debug("No close:\tpip for " + orders.get(0).getId() + ": "
-						+ orders.get(0).getProfitLossInPips());
+				LOGGER.debug("No close:\tpip for " + StateMachine.getInstance().getOrders().get(0).getId() + ": "
+						+ StateMachine.getInstance().getOrders().get(0).getProfitLossInPips());
 			}
 		}
 		return ret;
 	}
 
 	@Override
-	public State onStart(Instrument instrument, ITick tick, Signal signal, List<IOrder> orders) {
+	public synchronized State onStart(Instrument instrument, ITick tick, Signal signal) {
 		/*
 		 * calculation
 		 */
@@ -143,14 +141,16 @@ public class Scalping7Strategy extends TickStrategy {
 		// TODO: this has no SL or TP! This is dangerous!
 		// TODO: define method for this
 		try {
-			IOrder order = StateStrategy.getInstance().getContext().getEngine()
-					.submitOrder(getName() + signal.getStrength(), instrument, signal.getType(), 0.1);
-			orders.add(order);
+			IOrder order = StateMachine.getInstance().getContext().getEngine()
+					.submitOrder(getName() + signal.getValue(), instrument, signal.getType(), 0.1);
+			StateMachine.getInstance().getOrders().add(order);
 			ScalpHolderState scalpState = new ScalpHolderState();
 			scalpState.addStrategy(this);
 			scalpState.setInstrument(instrument);
 			scalpState.setPeriod(Period.ONE_MIN);
-			LOGGER.debug("returning " + scalpState.getName() + " onStart from " + getName());
+			LOGGER.debug("returning " + scalpState.getName() + " onStart from " + getName() + " and orders "
+					+ StateMachine.getInstance().getOrders().size() + " onString "
+					+ StateMachine.getInstance().getOrders().toString());
 			return scalpState;
 		} catch (JFException e) {
 			// TODO Auto-generated catch block
@@ -162,15 +162,16 @@ public class Scalping7Strategy extends TickStrategy {
 	}
 
 	@Override
-	public State onStop(List<IOrder> orders) {
+	public State onStop() {
 		try {
-			StateStrategy.getInstance().getContext().getEngine().closeOrders(orders);
+			StateMachine.getInstance().getContext().getEngine().closeOrders(StateMachine.getInstance().getOrders());
+			StateMachine.getInstance().getOrders().clear();
 		} catch (JFException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		SignalSeekerState signalState = new SignalSeekerState();
-		for (Strategy s : StateStrategy.getInstance().getStrategies()) {
+		for (Strategy s : StateMachine.getInstance().getStrategies()) {
 			signalState.addStrategy(s);
 		}
 		return signalState;
