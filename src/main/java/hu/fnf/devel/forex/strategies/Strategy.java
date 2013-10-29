@@ -4,6 +4,7 @@ import hu.fnf.devel.forex.StateStrategy;
 import hu.fnf.devel.forex.states.State;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.dukascopy.api.IOrder;
@@ -16,7 +17,7 @@ public abstract class Strategy {
 	protected Set<Period> periods = new HashSet<Period>();
 
 	abstract public String getName();
-	abstract public State onStop();
+	abstract public State onStop(List<IOrder> orders);
 
 	public void addInstrument(Instrument instrument) {
 		instruments.add(instrument);
@@ -45,6 +46,19 @@ public abstract class Strategy {
 			try {
 
 				return StateStrategy.getInstance().getContext().getEngine().getOrders().size();
+			} catch (JFException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} else {
+			int count = 0;
+			try {
+				for ( IOrder o: StateStrategy.getInstance().getContext().getEngine().getOrders() ) {
+					if ( o.getState() == ostate ) {
+						count++;
+					}
+				}
+				return count;
 			} catch (JFException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
