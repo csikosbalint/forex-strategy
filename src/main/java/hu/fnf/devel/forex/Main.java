@@ -1,13 +1,8 @@
 package hu.fnf.devel.forex;
 
-import hu.fnf.devel.forex.strategies.Scalping7Strategy;
-import hu.fnf.devel.forex.strategies.Strategy;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.dukascopy.api.Instrument;
-import com.dukascopy.api.Period;
 import com.dukascopy.api.system.ClientFactory;
 import com.dukascopy.api.system.IClient;
 import com.dukascopy.api.system.ISystemListener;
@@ -80,7 +75,7 @@ public class Main {
 		int i = 10; // wait max ten seconds
 		while (i > 0 && !client.isConnected()) {
 			try {
-				Thread.sleep(2000);
+				Thread.sleep(1000);
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -96,7 +91,7 @@ public class Main {
 		// workaround for LoadNumberOfCandlesAction for JForex-API versions >
 		// 2.6.64
 		try {
-			Thread.sleep(15000);
+			Thread.sleep(5000);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -105,17 +100,17 @@ public class Main {
 		/*
 		 * strategies
 		 */
-		Strategy s1 = new Scalping7Strategy();
-		//s1.addInstrument(Instrument.EURUSD);
-		s1.addInstrument(Instrument.EURJPY);
-		s1.addInstrument(Instrument.GBPJPY);
-		s1.addPeriod(Period.ONE_MIN);
+//		Strategy s1 = new Scalping7Strategy();
+//		//s1.addInstrument(Instrument.EURUSD);
+//		s1.addInstrument(Instrument.EURJPY);
+//		s1.addInstrument(Instrument.GBPJPY);
+//		s1.addPeriod(Period.ONE_MIN);
 		//s1.addPeriod(Period.FIVE_MINS);
 		//s1.addPeriod(Period.FIFTEEN_MINS);
 		
 		// singleton 
 		StateMachine stateStrategy = StateMachine.getInstance();
-		stateStrategy.addStrategy(s1);
+//		stateStrategy.addStrategy(s1);
 		
 		client.startStrategy(stateStrategy);
 		

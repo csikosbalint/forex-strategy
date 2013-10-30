@@ -1,9 +1,12 @@
 package hu.fnf.devel.forex.states;
 
+import hu.fnf.devel.forex.Signal;
+import hu.fnf.devel.forex.strategies.Strategy;
+
+import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import hu.fnf.devel.forex.strategies.Strategy;
 
 import com.dukascopy.api.IBar;
 import com.dukascopy.api.ITick;
@@ -14,31 +17,37 @@ public abstract class State {
 	protected static final Logger LOGGER = LoggerFactory.getLogger(State.class);
 
 	protected String name;
-	protected Strategy strategy;
 	protected Period period;
 	protected Instrument instrument;
-	
-	public State(String name) {
-		this.name = name;
-		LOGGER.debug("new " + getName());
-	}
+
+	// TODO: Iterator pattern
+	public abstract Set<State> nextStates();
+
+	public abstract Set<Instrument> getInstruments();
+
+	public abstract Signal signalStrength(Instrument instrument, ITick tick, State actual);
+
+	public abstract boolean onArriving(Instrument instrument, Period period, IBar askBar, IBar bidBar, Signal signal);
+
+	public abstract boolean onArriving(Instrument instrument, ITick tick, Signal signal);
+
+	public abstract boolean onLeaving(Instrument instrument, Period period, IBar askBar, IBar bidBar, Signal signal);
+
+	public abstract boolean onLeaving(Instrument instrument, ITick tick, Signal signal);
 
 	public abstract String getName();
-	
+
 	public abstract void transaction(Instrument instrument, ITick tick);
 
 	public abstract void transaction(Instrument instrument, Period period, IBar askBar, IBar bidBar);
 
-	public void addStrategy(Strategy strategy) {
-		this.strategy = strategy;
-	}
+	public abstract Set<Strategy> getStrategies();
+	
+	public abstract Instrument getInstrument();
 
-	public Strategy getStrategy() {
-		return strategy;
-	}
-
-	public void setStrategy(Strategy strategy) {
-		this.strategy = strategy;
+	public State(String name) {
+		this.name = name;
+		LOGGER.debug("new " + getName());
 	}
 
 	public Period getPeriod() {
@@ -49,23 +58,8 @@ public abstract class State {
 		this.period = period;
 	}
 
-	public Instrument getInstrument() {
-		return instrument;
-	}
-
 	public void setInstrument(Instrument instrument) {
 		this.instrument = instrument;
 	}
-
-	public boolean isAllowed(State state) {
-		return true;
-//		if ( this == state && this instanceof SignalSeekerState ) {
-//			return false;
-//		} else {
-//			// TODO: IMPORTANT! Only with 1 strategy works this! Plan it!
-//			return true;
-//		}
-	}
-
 
 }

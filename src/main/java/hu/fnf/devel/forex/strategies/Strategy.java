@@ -1,7 +1,6 @@
 package hu.fnf.devel.forex.strategies;
 
 import hu.fnf.devel.forex.StateMachine;
-import hu.fnf.devel.forex.states.State;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -14,9 +13,9 @@ import com.dukascopy.api.Period;
 public abstract class Strategy {
 	protected Set<Instrument> instruments = new HashSet<Instrument>();
 	protected Set<Period> periods = new HashSet<Period>();
-
-	abstract public String getName();
-	abstract public State onStop();
+	protected String name;
+	
+	abstract public boolean onStop();
 
 	public void addInstrument(Instrument instrument) {
 		instruments.add(instrument);
@@ -32,6 +31,10 @@ public abstract class Strategy {
 
 	public Set<Period> getPeriods() {
 		return periods;
+	}
+
+	public String getName() {
+		return name;
 	}
 
 	/*
@@ -52,8 +55,8 @@ public abstract class Strategy {
 		} else {
 			int count = 0;
 			try {
-				for ( IOrder o: StateMachine.getInstance().getContext().getEngine().getOrders() ) {
-					if ( o.getState() == ostate ) {
+				for (IOrder o : StateMachine.getInstance().getContext().getEngine().getOrders()) {
+					if (o.getState() == ostate) {
 						count++;
 					}
 				}

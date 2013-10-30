@@ -1,13 +1,10 @@
 package hu.fnf.devel.forex;
 
-import hu.fnf.devel.forex.states.State;
 import hu.fnf.devel.forex.states.SignalSeekerState;
-import hu.fnf.devel.forex.strategies.Strategy;
+import hu.fnf.devel.forex.states.State;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,10 +25,9 @@ public class StateMachine implements IStrategy {
 
 	private static StateMachine instance;
 	private static State state;
-	private Set<Strategy> strategies;
+
+	private List<IOrder> orders;
 	private IContext context;
-	// TODO: strategy cannot have the orders (this wont be destroyed!)
-	private List<IOrder> orders = new ArrayList<IOrder>();
 
 	// synchronized if needed
 	public static StateMachine getInstance() {
@@ -40,15 +36,23 @@ public class StateMachine implements IStrategy {
 		}
 		return instance;
 	}
+
 	/*
-	 * THREAD SAFE!!!
+	 * THREAD SAFE SETTER!!!
 	 */
-	public static synchronized void setState(State state) {
-		LOGGER.debug("received state for setState is " + state.getName() + ". Actual state is "
-				+ StateMachine.state.getName());
-		if (StateMachine.state != null && StateMachine.state.isAllowed(state)) {
-			LOGGER.info("state change: " + StateMachine.state.getName() + " -> " + state.getName());
-			StateMachine.state = state;
+	public static synchronized void changeState(State newState) {
+		LOGGER.debug(StateMachine.state.getName() + ".setState(" + newState.getName() + ")");
+		if (StateMachine.state != null && StateMachine.state != newState) {
+			LOGGER.info("state change " + StateMachine.state.getName() + " -> " + newState.getName());
+			if ( StateMachine.state.onLeaving() && newState.onArriving() ) {
+				StateMachine.state = newState;
+			}
+		}
+	}
+
+	public synchronized void addOrder(IOrder order) {
+		if (!orders.contains(order)) {
+			orders.add(order);
 		}
 	}
 
@@ -56,26 +60,15 @@ public class StateMachine implements IStrategy {
 		return state;
 	}
 
+	public List<IOrder> getOrders() {
+		return orders;
+	}
+
 	public IContext getContext() {
 		return context;
 	}
 
-	public Set<Strategy> getStrategies() {
-		return strategies;
-	}
-	
-	public List<IOrder> getOrders() {
-		return orders;
-	}
-	public void setOrders(List<IOrder> orders) {
-		this.orders = orders;
-	}
-	public synchronized void  addOrders(IOrder order) {
-		if ( !orders.contains(order) ) {
-			orders.add(order);
-		}
-	}
-	private State recignizeState(Set<Strategy> strategies) {
+	private State recignizeState() {
 		// TODO: recognize states
 		/*
 		 * For now every start assumed a new beginning
@@ -84,45 +77,27 @@ public class StateMachine implements IStrategy {
 		 * return new ScalpHolderState(new ScalpingStrategy());
 		 */
 		SignalSeekerState signalSeekerState = new SignalSeekerState();
-		for (Strategy s : strategies) {
-			signalSeekerState.addStrategy(s);
-		}
 		return signalSeekerState;
 	}
 
 	@Override
 	public void onStart(IContext context) throws JFException {
 		this.context = context;
-		LOGGER.debug("state recognition...");
-		StateMachine.state = recignizeState(strategies);
-		LOGGER.info("recognized state is " + state.getName());
-		Set<Instrument> instruments = new HashSet<Instrument>();
-		LOGGER.info("subscribing to instruments:");
-		for (Strategy s : strategies) {
-			for (Instrument i : s.getInstruments()) {
-				instruments.add(i); // no duplicate
-				LOGGER.info("\t*" + i.name() + "(" + s.getName() + ")");
-			}
-		}
-		context.setSubscribedInstruments(instruments);
+		this.orders = context.getEngine().getOrders();
+		StateMachine.state = recignizeState();
+		LOGGER.info("Initalization");
+		LOGGER.debug("\tstate:\t" + state.getName());
+		LOGGER.debug("\torders:\t" + orders.size());
 	}
-
-	/*
-	 * Action
-	 */
 
 	@Override
 	public void onTick(Instrument instrument, ITick tick) throws JFException {
-		LOGGER.debug(StateMachine.state.getName() + " tick " + instrument.name() );
-		StateMachine.state.transaction(instrument, tick);
-		
+		changeState(StateMachine.state.transaction(instrument, tick));
 	}
 
 	@Override
 	public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
-		//LOGGER.debug(StateStrategy.state.getName() + " onBar tick " + instrument.name() + "/" + period.getInterval());
-		
-		//StateStrategy.state.transaction(instrument, period, askBar, bidBar);
+
 	}
 
 	@Override
@@ -141,13 +116,6 @@ public class StateMachine implements IStrategy {
 	public void onStop() throws JFException {
 		// TODO Auto-generated method stub
 
-	}
-
-	public void addStrategy(Strategy strategy) {
-		if (strategies == null) {
-			strategies = new HashSet<Strategy>();
-		}
-		strategies.add(strategy);
 	}
 
 }
