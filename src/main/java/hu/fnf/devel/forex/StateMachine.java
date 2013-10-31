@@ -3,7 +3,6 @@ package hu.fnf.devel.forex;
 import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.states.State;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -23,6 +22,9 @@ import com.dukascopy.api.Period;
 public class StateMachine implements IStrategy {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
 
+	public static final int OPEN = 0;
+	public static final int CLOSE = 1;
+
 	private static StateMachine instance;
 	private static State state;
 
@@ -41,10 +43,16 @@ public class StateMachine implements IStrategy {
 	 * THREAD SAFE SETTER!!!
 	 */
 	public static synchronized void changeState(State newState) {
-		LOGGER.debug(StateMachine.state.getName() + ".setState(" + newState.getName() + ")");
-		if (StateMachine.state != null && StateMachine.state != newState) {
+		if ( newState == null ) {
+			return;
+		}
+		if (StateMachine.state != null && !StateMachine.state.getName().equalsIgnoreCase(newState.getName())) {
 			LOGGER.info("state change " + StateMachine.state.getName() + " -> " + newState.getName());
-			if ( StateMachine.state.onLeaving() && newState.onArriving() ) {
+			if (StateMachine.state.onLeaving() && newState.onArriving()) {
+				StateMachine.state = newState;
+			}
+		} else {
+			if (newState.onArriving()) {
 				StateMachine.state = newState;
 			}
 		}
@@ -84,7 +92,8 @@ public class StateMachine implements IStrategy {
 	public void onStart(IContext context) throws JFException {
 		this.context = context;
 		this.orders = context.getEngine().getOrders();
-		StateMachine.state = recignizeState();
+
+		changeState(recignizeState());
 		LOGGER.info("Initalization");
 		LOGGER.debug("\tstate:\t" + state.getName());
 		LOGGER.debug("\torders:\t" + orders.size());
@@ -92,7 +101,32 @@ public class StateMachine implements IStrategy {
 
 	@Override
 	public void onTick(Instrument instrument, ITick tick) throws JFException {
-		changeState(StateMachine.state.transaction(instrument, tick));
+		// changeState(StateMachine.state.transaction(instrument, tick));
+		State bestState = null;
+		Signal bestSignal = new Signal();
+		for (State nextState : StateMachine.state.nextStates()) { // instantiate
+																	// all
+																	// states!!
+			LOGGER.debug("checking " + nextState.getName());
+			// TODO: 
+			for (Instrument i : nextState.getInstruments()) {
+				if (instrument.equals(i)) {
+					Signal nextSignal = nextState.signalStrength(instrument, tick, StateMachine.state);
+					LOGGER.debug(nextState.getName() + " signal strength: " + nextSignal.getValue());
+					if (nextSignal.getValue() > bestSignal.getValue()) {
+						bestState = nextState;
+						bestSignal = nextSignal;
+						LOGGER.debug(nextState.getName() + " is the new max with " + nextSignal.getValue());
+					}
+				}
+			}
+		}
+		if (bestState != null) {
+			bestState.prepareCommands(bestSignal);
+			if (bestState.executeCommands()) {
+				changeState(bestState);
+			}
+		}
 	}
 
 	@Override

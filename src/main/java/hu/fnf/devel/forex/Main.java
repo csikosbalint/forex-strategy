@@ -97,22 +97,7 @@ public class Main {
 			e.printStackTrace();
 		}
 		
-		/*
-		 * strategies
-		 */
-//		Strategy s1 = new Scalping7Strategy();
-//		//s1.addInstrument(Instrument.EURUSD);
-//		s1.addInstrument(Instrument.EURJPY);
-//		s1.addInstrument(Instrument.GBPJPY);
-//		s1.addPeriod(Period.ONE_MIN);
-		//s1.addPeriod(Period.FIVE_MINS);
-		//s1.addPeriod(Period.FIFTEEN_MINS);
-		
-		// singleton 
-		StateMachine stateStrategy = StateMachine.getInstance();
-//		stateStrategy.addStrategy(s1);
-		
-		client.startStrategy(stateStrategy);
+		client.startStrategy(StateMachine.getInstance());
 		
 	}
 }
