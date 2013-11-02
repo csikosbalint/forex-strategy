@@ -22,7 +22,8 @@
 		<dependency>
 			<groupId>com.dukascopy.dds2</groupId>
 			<artifactId>DDS2-jClient-JForex</artifactId>
-			<!-- find the latest available version here: http://www.dukascopy.com/client/jforexlib/publicrepo/com/dukascopy/dds2/DDS2-jClient-JForex/ -->
+			<!-- find the latest available version here: 
+			http://www.dukascopy.com/client/jforexlib/publicrepo/com/dukascopy/dds2/DDS2-jClient-JForex/ -->
 			<version>2.29</version>
 			<exclusions>
 				<exclusion>

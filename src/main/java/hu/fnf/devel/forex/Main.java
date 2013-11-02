@@ -96,7 +96,7 @@ public class Main {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+		//client.compileStrategy("/home/johnnym/git/forex-strategy/src/main/java/hu/fnf/devel/forex/StateMachine.java", false);
 		client.startStrategy(StateMachine.getInstance());
 		
 	}

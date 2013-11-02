@@ -1,7 +1,10 @@
 package hu.fnf.devel.forex.states;
 
 import hu.fnf.devel.forex.Signal;
+import hu.fnf.devel.forex.StateMachine;
+import hu.fnf.devel.forex.commands.CloseAllCommand;
 import hu.fnf.devel.forex.commands.Command;
+import hu.fnf.devel.forex.commands.OpenCommand;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -33,7 +36,17 @@ public abstract class State {
 
 	public abstract boolean onLeaving();
 
-	public abstract void prepareCommands(Signal signal);
+	public void prepareCommands(Signal signal) {
+		switch (signal.getTag()) {
+		case StateMachine.OPEN:
+			commands.add(new OpenCommand(signal));
+			break;
+		case StateMachine.CLOSE:
+			commands.add(new CloseAllCommand());
+		default:
+			break;
+		}
+	}
 	
 	public boolean executeCommands() {
 		for ( Command c: commands ) {

@@ -1,9 +1,13 @@
 package hu.fnf.devel.forex;
 
+import hu.fnf.devel.forex.states.ScalpHolderState;
 import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.states.State;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import javax.print.attribute.standard.MediaSize.Engineering;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +32,6 @@ public class StateMachine implements IStrategy {
 	private static StateMachine instance;
 	private static State state;
 
-	private List<IOrder> orders;
 	private IContext context;
 
 	// synchronized if needed
@@ -58,18 +61,18 @@ public class StateMachine implements IStrategy {
 		}
 	}
 
-	public synchronized void addOrder(IOrder order) {
-		if (!orders.contains(order)) {
-			orders.add(order);
-		}
-	}
-
 	public State getState() {
 		return state;
 	}
 
 	public List<IOrder> getOrders() {
-		return orders;
+		try {
+			return context.getEngine().getOrders();
+		} catch (JFException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return new ArrayList<IOrder>();
+		}
 	}
 
 	public IContext getContext() {
@@ -84,19 +87,27 @@ public class StateMachine implements IStrategy {
 		/*
 		 * return new ScalpHolderState(new ScalpingStrategy());
 		 */
-		SignalSeekerState signalSeekerState = new SignalSeekerState();
-		return signalSeekerState;
+		try {
+			if ( context.getEngine().getOrders().size() == 0 ) {
+				return new SignalSeekerState();
+			} else {
+				return new ScalpHolderState();
+			}
+		} catch (JFException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	@Override
 	public void onStart(IContext context) throws JFException {
 		this.context = context;
-		this.orders = context.getEngine().getOrders();
 
 		changeState(recignizeState());
 		LOGGER.info("Initalization");
 		LOGGER.debug("\tstate:\t" + state.getName());
-		LOGGER.debug("\torders:\t" + orders.size());
+		LOGGER.debug("\torders:\t" + context.getEngine().getOrders().size());
 	}
 
 	@Override
@@ -109,8 +120,8 @@ public class StateMachine implements IStrategy {
 																	// states!!
 			LOGGER.debug("checking " + nextState.getName());
 			// TODO: 
-			for (Instrument i : nextState.getInstruments()) {
-				if (instrument.equals(i)) {
+			//for (Instrument i : nextState.getInstruments()) {
+				//if (instrument.equals(i)) {
 					Signal nextSignal = nextState.signalStrength(instrument, tick, StateMachine.state);
 					LOGGER.debug(nextState.getName() + " signal strength: " + nextSignal.getValue());
 					if (nextSignal.getValue() > bestSignal.getValue()) {
@@ -118,8 +129,8 @@ public class StateMachine implements IStrategy {
 						bestSignal = nextSignal;
 						LOGGER.debug(nextState.getName() + " is the new max with " + nextSignal.getValue());
 					}
-				}
-			}
+				//}
+			//}
 		}
 		if (bestState != null) {
 			bestState.prepareCommands(bestSignal);

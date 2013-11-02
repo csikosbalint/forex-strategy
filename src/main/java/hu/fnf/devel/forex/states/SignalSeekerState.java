@@ -2,12 +2,10 @@ package hu.fnf.devel.forex.states;
 
 import hu.fnf.devel.forex.Signal;
 import hu.fnf.devel.forex.StateMachine;
-import hu.fnf.devel.forex.commands.OpenCommand;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import com.dukascopy.api.IContext;
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
 
@@ -45,41 +43,21 @@ public class SignalSeekerState extends State {
 
 	@Override
 	public boolean onLeaving() {
+		// removing references
+		this.commands = null;
+		this.instruments = null;
+		this.periods = null;
+		this.signal = null;
 		return true;
 	}
 
 	@Override
 	public Signal signalStrength(Instrument instrument, ITick tick, State actual) {
-		double range = 10;
-		Signal ret = new Signal();
-		ret.setValue(0);
-		if (actual.getName().equalsIgnoreCase("ScalpHolderState")) {
-			if (StateMachine.getInstance().getOrders().size() == 0) {
-				ret.setTag(StateMachine.CLOSE);
-				if (StateMachine.getInstance().getOrders().get(0).getProfitLossInPips() > range * 0.6) {
-					LOGGER.info("close!\tpip for " + StateMachine.getInstance().getOrders().get(0).getId() + ": "
-							+ StateMachine.getInstance().getOrders().get(0).getProfitLossInPips());
-					ret.setValue(1);
-					// TODO: self type for openning and closing
-					ret.setType(null);
-				} else if (StateMachine.getInstance().getOrders().get(0).getProfitLossInPips() < -1 * range * 0.3) {
-					LOGGER.info("close!\tpip for " + StateMachine.getInstance().getOrders().get(0).getId() + ": "
-							+ StateMachine.getInstance().getOrders().get(0).getProfitLossInPips());
-					ret.setValue(1);
-					// TODO: self type for openning and closing
-					ret.setType(null);
-				} else {
-					LOGGER.debug("No close:\tpip for " + StateMachine.getInstance().getOrders().get(0).getId() + ": "
-							+ StateMachine.getInstance().getOrders().get(0).getProfitLossInPips());
-				}
-			}
+		LOGGER.debug(getName() + " signalStrength calculation "); 
+		if (actual instanceof ScalpHolderState ) {
+			return actual.signalStrength(instrument, tick, null);
 		}
-		return ret;
-	}
-
-	@Override
-	public void prepareCommands(Signal signal) {
-		commands.add(new OpenCommand(signal));
+		return new Signal();
 	}
 
 }

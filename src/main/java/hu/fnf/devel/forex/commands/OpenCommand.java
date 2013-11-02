@@ -1,6 +1,5 @@
 package hu.fnf.devel.forex.commands;
 
-import com.dukascopy.api.IOrder;
 import com.dukascopy.api.JFException;
 
 import hu.fnf.devel.forex.Signal;
@@ -15,8 +14,7 @@ public class OpenCommand implements Command {
 
 	@Override
 	public void execute() throws JFException {
-		IOrder order = StateMachine.getInstance().getContext().getEngine()
+		StateMachine.getInstance().getContext().getEngine()
 				.submitOrder("uuid", signal.getInstrument(), signal.getType(), signal.getAmount());
-		StateMachine.getInstance().addOrder(order);
 	}
 }
