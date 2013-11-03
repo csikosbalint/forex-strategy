@@ -1,6 +1,5 @@
 package hu.fnf.devel.forex.states;
 
-import hu.fnf.devel.forex.Signal;
 import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.commands.CloseAllCommand;
 import hu.fnf.devel.forex.commands.Command;
@@ -8,6 +7,8 @@ import hu.fnf.devel.forex.commands.OpenCommand;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import utils.Signal;
 
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
@@ -18,15 +19,14 @@ public abstract class State {
 
 	protected String name;
 	protected Signal signal;
-	
+
 	protected Set<Instrument> instruments;
 	protected Set<Period> periods;
 	protected Set<Command> commands;
 
-	// TODO: Iterator pattern
 	public abstract Set<State> nextStates();
 
-	public abstract Signal signalStrength(Instrument instrument, ITick tick, State actual);
+	public abstract Signal signalStrength(Instrument instrument, ITick tick, State actual) throws JFException;
 
 	public abstract boolean onArriving();
 
@@ -43,9 +43,9 @@ public abstract class State {
 			break;
 		}
 	}
-	
-	public boolean executeCommands() {
-		for ( Command c: commands ) {
+
+	public boolean executeCommands() throws JFException {
+		for (Command c : commands) {
 			try {
 				c.execute();
 			} catch (JFException e) {
@@ -57,12 +57,11 @@ public abstract class State {
 	}
 
 	public State(String name) {
-		this.name = name;		
+		this.name = name;
 		instruments = new HashSet<Instrument>();
 		periods = new HashSet<Period>();
 		commands = new HashSet<Command>();
 	}
-
 
 	public String getName() {
 		return name;

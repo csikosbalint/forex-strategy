@@ -10,44 +10,44 @@ import com.dukascopy.api.system.ISystemListener;
 
 public class Main {
 
-	private static final Logger LOGGER = Logger.getLogger(Main.class);
+	private static final Logger logger = Logger.getLogger(Main.class);
 	private static String jnlpUrl = "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
 	private static String userName = "DEMO10037hLwUqEU";
 	private static String password = "hLwUq";
-	
+
 	private static String phase;
-	
+
 	public static void setPhase(String phase) {
-		if ( Main.phase != null ) {
-			LOGGER.info("--- Ending " + getPhase() + "phase ---");
+		if (Main.phase != null) {
+			logger.info("--- Ending " + getPhase() + "phase ---");
 		}
 		Main.phase = phase;
-		LOGGER.info("--- Starting " + getPhase() + "phase ---");
+		logger.info("----------------------------------------");
+		logger.info("--- Starting " + getPhase() + "phase ---");
 	}
-	
+
 	public static String getPhase() {
 		return phase + " ";
 	}
-	
+
 	public static void main(String[] args) {
 		if ( args.length > 0 ) {
 			PropertyConfigurator.configure(args[0]);
+			logger.debug("Using config from file " + args[0]); 
 		} else {
 			BasicConfigurator.configure();
+			logger.debug("Using basic configuration for logging.");
 		}
+		logger.info("---------------- Forex robot written by johnnym  ----------------");
+		
+		setPhase("Downloading client");
 
 		IClient client = null;
 
-		LOGGER.info("info");
-		LOGGER.debug("debug");
-		LOGGER.warn("warn");
-		LOGGER.error("error");
-
 		try {
 			client = ClientFactory.getDefaultInstance();
-		} catch (Exception e1) {
-			e1.printStackTrace();
-			LOGGER.error("Cannot instanciate client!");
+		} catch (Exception e) {
+			logger.fatal("Cannot instanciate client!", e);
 			return;
 		}
 
@@ -62,11 +62,11 @@ public class Main {
 			}
 
 			public void onDisconnect() {
-				LOGGER.info("Client has been disconnected...");
+				logger.info("Client has been disconnected...");
 			}
 
 			public void onConnect() {
-				LOGGER.info("Client has been re-connected...");
+				logger.info("Client has been connected...");
 			}
 		});
 
@@ -74,39 +74,47 @@ public class Main {
 		try {
 			client.connect(jnlpUrl, userName, password);
 		} catch (Exception e) {
-			LOGGER.fatal("Cannot connect to " + jnlpUrl + "@" + userName + ":" + password, e);
+			logger.fatal("Cannot connect to " + jnlpUrl + "@" + userName + ":" + password, e);
 			return;
 		}
 
 		// wait for it to connect
 		int i = 10; // wait max ten seconds
 		while (i > 0 && !client.isConnected()) {
+			logger.debug("waiting for connection ...");
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
-				LOGGER.fatal("Connection process has been aborted!", e);
+				logger.fatal("Connection process has been aborted!", e);
 				return;
 			}
 			i--;
-		}
-		if (!client.isConnected()) {
-			LOGGER.error("Failed to connect Dukascopy servers!");
+			if ( i == 0 ) {
+				logger.fatal("Connection was made, but acknowledge timed out!");
+				return;
+			}
 		}
 
 		// workaround for LoadNumberOfCandlesAction for JForex-API versions >
 		// 2.6.64
 		try {
-			Thread.sleep(5000);
+			int ms = 5000;
+			logger.info("Wainting " + ms + "ms for candles to load.");
+			logger.debug("workaround: JForex-API versions 2.6.64.");
+			Thread.sleep(ms);
 		} catch (InterruptedException e) {
-			LOGGER.error("Workaround for LoadNumberOfCandlesAction for JForex-API versions 2.6.64 has been aborted.", e);
+			logger.error("Workaround for LoadNumberOfCandlesAction for JForex-API versions 2.6.64 has been aborted.", e);
 		}
+		logger.info("Number of candles loaded.");
 
 		setPhase("Strategy starting");
 		try {
 			client.startStrategy(StateMachine.getInstance());
 		} catch (Exception e) {
-			LOGGER.fatal("Cannot start strategy, possibly connection error or no strategy!", e);
+			logger.fatal("Cannot start strategy, possibly connection error or no strategy!", e);
 			return;
 		}
+		logger.info("strategy started.");
+		setPhase("Running");
 	}
 }

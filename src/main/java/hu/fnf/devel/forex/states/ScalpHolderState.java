@@ -1,11 +1,12 @@
 package hu.fnf.devel.forex.states;
 
-import hu.fnf.devel.forex.Signal;
 import hu.fnf.devel.forex.StateMachine;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+
+import utils.Signal;
 
 import com.dukascopy.api.IContext;
 import com.dukascopy.api.IEngine.OrderCommand;
@@ -44,11 +45,11 @@ public class ScalpHolderState extends State {
 	}
 
 	@Override
-	public Signal signalStrength(Instrument instrument, ITick tick, State actual) {
+	public Signal signalStrength(Instrument instrument, ITick tick, State actual) throws JFException {
 		return signalStrength(instrument, tick);
 	}
 
-	private Signal signalStrength(Instrument instrument, ITick tick) {
+	private Signal signalStrength(Instrument instrument, ITick tick) throws JFException {
 		IContext context = StateMachine.getInstance().getContext();
 		Signal ret = new Signal();
 		ret.setValue(0);
@@ -56,7 +57,8 @@ public class ScalpHolderState extends State {
 		ret.setAmount(amount);
 
 		// TODO: in this point order anomailes have to be handeled
-		if (StateMachine.getInstance().getOrders().size() == 0) {
+
+		if ( StateMachine.getInstance().getOrders().size() == 0) {
 			try {
 				range = StateMachine.getInstance().getContext().getIndicators()
 						.stdDev(instrument, Period.ONE_MIN, OfferSide.ASK, AppliedPrice.MEDIAN_PRICE, 50, 100, 0)
@@ -107,8 +109,7 @@ public class ScalpHolderState extends State {
 					LOGGER.debug("    yellow:\t" + (yellow[2]) + " > ask: " + (tick.getAsk()));
 				}
 			} catch (JFException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				throw new JFException("Error during buy calculation.", e);
 			}
 			/*
 			 * sell strategy
@@ -138,8 +139,7 @@ public class ScalpHolderState extends State {
 					LOGGER.debug("    yellow:\t" + (yellow[0]) + " < bid: " + (tick.getBid()));
 				}
 			} catch (JFException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				throw new JFException("Error during sell calculation.", e);
 			}
 			LOGGER.debug("retval is " + ret.getType() + "(" + ret.getValue() + ")");
 			return ret;
@@ -148,6 +148,7 @@ public class ScalpHolderState extends State {
 			 * close strategy
 			 */
 			range -= 0.005;
+			
 			if (instrument != StateMachine.getInstance().getOrders().get(0).getInstrument()) {
 				return ret;
 			}

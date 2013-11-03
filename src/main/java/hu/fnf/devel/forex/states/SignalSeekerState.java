@@ -1,6 +1,5 @@
 package hu.fnf.devel.forex.states;
 
-import hu.fnf.devel.forex.Signal;
 import hu.fnf.devel.forex.StateMachine;
 
 import java.util.HashSet;
@@ -8,8 +7,11 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import utils.Signal;
+
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
+import com.dukascopy.api.JFException;
 
 public class SignalSeekerState extends State {
 	private static final Logger LOGGER = Logger.getLogger(SignalSeekerState.class);
@@ -55,7 +57,7 @@ public class SignalSeekerState extends State {
 	}
 
 	@Override
-	public Signal signalStrength(Instrument instrument, ITick tick, State actual) {
+	public Signal signalStrength(Instrument instrument, ITick tick, State actual) throws JFException {
 		LOGGER.debug(getName() + " signalStrength calculation "); 
 		if (actual instanceof ScalpHolderState ) {
 			return actual.signalStrength(instrument, tick, null);
