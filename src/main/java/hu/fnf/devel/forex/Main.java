@@ -1,39 +1,56 @@
 package hu.fnf.devel.forex;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 
 import com.dukascopy.api.system.ClientFactory;
 import com.dukascopy.api.system.IClient;
 import com.dukascopy.api.system.ISystemListener;
-import com.dukascopy.api.system.JFAuthenticationException;
-import com.dukascopy.api.system.JFVersionException;
 
 public class Main {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
-
+	private static final Logger LOGGER = Logger.getLogger(Main.class);
 	private static String jnlpUrl = "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
 	private static String userName = "DEMO10037hLwUqEU";
 	private static String password = "hLwUq";
-
+	
+	private static String phase;
+	
+	public static void setPhase(String phase) {
+		if ( Main.phase != null ) {
+			LOGGER.info("--- Ending " + getPhase() + "phase ---");
+		}
+		Main.phase = phase;
+		LOGGER.info("--- Starting " + getPhase() + "phase ---");
+	}
+	
+	public static String getPhase() {
+		return phase + " ";
+	}
+	
 	public static void main(String[] args) {
+		if ( args.length > 0 ) {
+			PropertyConfigurator.configure(args[0]);
+		} else {
+			BasicConfigurator.configure();
+		}
+
 		IClient client = null;
+
+		LOGGER.info("info");
+		LOGGER.debug("debug");
+		LOGGER.warn("warn");
+		LOGGER.error("error");
 
 		try {
 			client = ClientFactory.getDefaultInstance();
-		} catch (ClassNotFoundException e1) {
-			// TODO Auto-generated catch block
+		} catch (Exception e1) {
 			e1.printStackTrace();
-		} catch (IllegalAccessException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (InstantiationException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			LOGGER.error("Cannot instanciate client!");
+			return;
 		}
 
-		//LOGGER.debug(client.getPreferences().chart().toString());
 		client.setSystemListener(new ISystemListener() {
 
 			public void onStop(long arg0) {
@@ -45,31 +62,21 @@ public class Main {
 			}
 
 			public void onDisconnect() {
-				// TODO Auto-generated method stub
-
+				LOGGER.info("Client has been disconnected...");
 			}
 
 			public void onConnect() {
-				// TODO Auto-generated method stub
-
+				LOGGER.info("Client has been re-connected...");
 			}
 		});
 
+		setPhase("Connection");
 		try {
 			client.connect(jnlpUrl, userName, password);
-		} catch (JFAuthenticationException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (JFVersionException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.fatal("Cannot connect to " + jnlpUrl + "@" + userName + ":" + password, e);
+			return;
 		}
-		/*
-		 * is .connect() an async call???
-		 */
 
 		// wait for it to connect
 		int i = 10; // wait max ten seconds
@@ -77,15 +84,13 @@ public class Main {
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.fatal("Connection process has been aborted!", e);
+				return;
 			}
 			i--;
 		}
 		if (!client.isConnected()) {
-			LOGGER.error("Failed to connect Dukascopy servers");
-			client.reconnect();
-			//System.exit(1);
+			LOGGER.error("Failed to connect Dukascopy servers!");
 		}
 
 		// workaround for LoadNumberOfCandlesAction for JForex-API versions >
@@ -93,11 +98,15 @@ public class Main {
 		try {
 			Thread.sleep(5000);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.error("Workaround for LoadNumberOfCandlesAction for JForex-API versions 2.6.64 has been aborted.", e);
 		}
-		//client.compileStrategy("/home/johnnym/git/forex-strategy/src/main/java/hu/fnf/devel/forex/StateMachine.java", false);
-		client.startStrategy(StateMachine.getInstance());
-		
+
+		setPhase("Strategy starting");
+		try {
+			client.startStrategy(StateMachine.getInstance());
+		} catch (Exception e) {
+			LOGGER.fatal("Cannot start strategy, possibly connection error or no strategy!", e);
+			return;
+		}
 	}
 }

@@ -5,6 +5,8 @@ import hu.fnf.devel.forex.StateMachine;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 import com.dukascopy.api.IContext;
 import com.dukascopy.api.IEngine.OrderCommand;
 import com.dukascopy.api.IIndicators.AppliedPrice;
@@ -16,6 +18,7 @@ import com.dukascopy.api.OfferSide;
 import com.dukascopy.api.Period;
 
 public class ScalpHolderState extends State {
+	private static final Logger LOGGER = Logger.getLogger(ScalpHolderState.class);
 	private double range;
 	private double loss;
 	private double profit;
@@ -52,11 +55,7 @@ public class ScalpHolderState extends State {
 		ret.setInstrument(instrument);
 		ret.setAmount(amount);
 
-		// TODO: in this point anomailes have to be handeled
-
-		LOGGER.debug(getName() + " signalStrength calculation myOrders.size: "
-				+ StateMachine.getInstance().getOrders().size());
-
+		// TODO: in this point order anomailes have to be handeled
 		if (StateMachine.getInstance().getOrders().size() == 0) {
 			try {
 				range = StateMachine.getInstance().getContext().getIndicators()

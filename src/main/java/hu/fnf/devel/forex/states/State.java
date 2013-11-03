@@ -9,16 +9,12 @@ import hu.fnf.devel.forex.commands.OpenCommand;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
 import com.dukascopy.api.JFException;
 import com.dukascopy.api.Period;
 
 public abstract class State {
-	protected static final Logger LOGGER = LoggerFactory.getLogger(State.class);
 
 	protected String name;
 	protected Signal signal;
@@ -61,9 +57,7 @@ public abstract class State {
 	}
 
 	public State(String name) {
-		this.name = name;
-		LOGGER.debug("new " + getName());
-		
+		this.name = name;		
 		instruments = new HashSet<Instrument>();
 		periods = new HashSet<Period>();
 		commands = new HashSet<Command>();

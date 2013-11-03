@@ -4,6 +4,7 @@ import com.dukascopy.api.IEngine.OrderCommand;
 import com.dukascopy.api.Instrument;
 
 public class Signal {
+	
 	private int value;
 	private OrderCommand type;
 	private Instrument instrument;

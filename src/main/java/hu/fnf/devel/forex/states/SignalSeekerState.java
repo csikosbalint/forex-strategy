@@ -6,10 +6,13 @@ import hu.fnf.devel.forex.StateMachine;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
 
 public class SignalSeekerState extends State {
+	private static final Logger LOGGER = Logger.getLogger(SignalSeekerState.class);
 
 	public SignalSeekerState() {
 		super("SignalSeekerState");

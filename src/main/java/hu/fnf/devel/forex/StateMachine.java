@@ -7,10 +7,7 @@ import hu.fnf.devel.forex.states.State;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.print.attribute.standard.MediaSize.Engineering;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 
 import com.dukascopy.api.IAccount;
 import com.dukascopy.api.IBar;
@@ -24,7 +21,7 @@ import com.dukascopy.api.JFException;
 import com.dukascopy.api.Period;
 
 public class StateMachine implements IStrategy {
-	private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
+	private static final Logger LOGGER = Logger.getLogger(Main.class);
 
 	public static final int OPEN = 0;
 	public static final int CLOSE = 1;
@@ -46,7 +43,7 @@ public class StateMachine implements IStrategy {
 	 * THREAD SAFE SETTER!!!
 	 */
 	public static synchronized void changeState(State newState) {
-		if ( newState == null ) {
+		if (newState == null) {
 			return;
 		}
 		if (StateMachine.state != null && !StateMachine.state.getName().equalsIgnoreCase(newState.getName())) {
@@ -88,7 +85,7 @@ public class StateMachine implements IStrategy {
 		 * return new ScalpHolderState(new ScalpingStrategy());
 		 */
 		try {
-			if ( context.getEngine().getOrders().size() == 0 ) {
+			if (context.getEngine().getOrders().size() == 0) {
 				return new SignalSeekerState();
 			} else {
 				return new ScalpHolderState();
@@ -103,11 +100,8 @@ public class StateMachine implements IStrategy {
 	@Override
 	public void onStart(IContext context) throws JFException {
 		this.context = context;
-
+		LOGGER.debug(context.getAccount().getLeverage());
 		changeState(recignizeState());
-		LOGGER.info("Initalization");
-		LOGGER.debug("\tstate:\t" + state.getName());
-		LOGGER.debug("\torders:\t" + context.getEngine().getOrders().size());
 	}
 
 	@Override
@@ -119,18 +113,18 @@ public class StateMachine implements IStrategy {
 																	// all
 																	// states!!
 			LOGGER.debug("checking " + nextState.getName());
-			// TODO: 
-			//for (Instrument i : nextState.getInstruments()) {
-				//if (instrument.equals(i)) {
-					Signal nextSignal = nextState.signalStrength(instrument, tick, StateMachine.state);
-					LOGGER.debug(nextState.getName() + " signal strength: " + nextSignal.getValue());
-					if (nextSignal.getValue() > bestSignal.getValue()) {
-						bestState = nextState;
-						bestSignal = nextSignal;
-						LOGGER.debug(nextState.getName() + " is the new max with " + nextSignal.getValue());
-					}
-				//}
-			//}
+			// TODO:
+			// for (Instrument i : nextState.getInstruments()) {
+			// if (instrument.equals(i)) {
+			Signal nextSignal = nextState.signalStrength(instrument, tick, StateMachine.state);
+			LOGGER.debug(nextState.getName() + " signal strength: " + nextSignal.getValue());
+			if (nextSignal.getValue() > bestSignal.getValue()) {
+				bestState = nextState;
+				bestSignal = nextSignal;
+				LOGGER.debug(nextState.getName() + " is the new max with " + nextSignal.getValue());
+			}
+			// }
+			// }
 		}
 		if (bestState != null) {
 			bestState.prepareCommands(bestSignal);
