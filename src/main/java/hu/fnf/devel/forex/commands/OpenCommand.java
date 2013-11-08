@@ -2,12 +2,12 @@ package hu.fnf.devel.forex.commands;
 
 import org.apache.log4j.Logger;
 
-import utils.Signal;
 
 import com.dukascopy.api.IOrder;
 import com.dukascopy.api.JFException;
 
 import hu.fnf.devel.forex.StateMachine;
+import hu.fnf.devel.forex.utils.Signal;
 
 public class OpenCommand implements Command {
 	private static final Logger logger = Logger.getLogger(OpenCommand.class);

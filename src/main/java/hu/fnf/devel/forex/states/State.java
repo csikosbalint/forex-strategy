@@ -4,11 +4,10 @@ import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.commands.CloseAllCommand;
 import hu.fnf.devel.forex.commands.Command;
 import hu.fnf.devel.forex.commands.OpenCommand;
+import hu.fnf.devel.forex.utils.Signal;
 
 import java.util.HashSet;
 import java.util.Set;
-
-import utils.Signal;
 
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
@@ -24,13 +23,7 @@ public abstract class State {
 	protected Set<Period> periods;
 	protected Set<Command> commands;
 
-	public abstract Set<State> nextStates();
-
 	public abstract Signal signalStrength(Instrument instrument, ITick tick, State actual) throws JFException;
-
-	public abstract boolean onArriving();
-
-	public abstract boolean onLeaving();
 
 	public void prepareCommands(Signal signal) {
 		switch (signal.getTag()) {
@@ -53,6 +46,26 @@ public abstract class State {
 				return false;
 			}
 		}
+		return true;
+	}
+
+	public Set<State> nextStates() {
+		Set<State> ret = new HashSet<State>();
+		ret.add(new SignalSeekerState());
+
+		return ret;
+	}
+	
+	public boolean onArriving() {
+		return true;
+	}
+
+	public boolean onLeaving() {
+		// removing references
+		this.commands = null;
+		this.instruments = null;
+		this.periods = null;
+		this.signal = null;
 		return true;
 	}
 

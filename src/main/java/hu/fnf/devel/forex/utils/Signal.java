@@ -1,4 +1,4 @@
-package utils;
+package hu.fnf.devel.forex.utils;
 
 import com.dukascopy.api.IEngine.OrderCommand;
 import com.dukascopy.api.Instrument;

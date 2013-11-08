@@ -1,14 +1,13 @@
 package hu.fnf.devel.forex;
 
-import hu.fnf.devel.forex.states.ScalpHolderState;
+import hu.fnf.devel.forex.states.ScalpHolder7State;
 import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.states.State;
+import hu.fnf.devel.forex.utils.Signal;
 
 import java.util.List;
 
 import org.apache.log4j.Logger;
-
-import utils.Signal;
 
 import com.dukascopy.api.IAccount;
 import com.dukascopy.api.IBar;
@@ -31,7 +30,7 @@ public class StateMachine implements IStrategy {
 	private static State state;
 
 	private IContext context;
-	
+
 	/*
 	 * THREAD SAFE!!!
 	 */
@@ -41,7 +40,6 @@ public class StateMachine implements IStrategy {
 		}
 		return instance;
 	}
-
 
 	public static synchronized void changeState(State newState) {
 		if (newState == null) {
@@ -58,6 +56,7 @@ public class StateMachine implements IStrategy {
 			}
 		}
 	}
+
 	/*
 	 * --------- END ---------
 	 */
@@ -84,7 +83,7 @@ public class StateMachine implements IStrategy {
 			if (context.getEngine().getOrders().size() == 0) {
 				return new SignalSeekerState();
 			} else {
-				return new ScalpHolderState();
+				return new ScalpHolder7State();
 			}
 		} catch (JFException e) {
 			throw new JFException("Cannot load orders from server.", e);
@@ -94,7 +93,7 @@ public class StateMachine implements IStrategy {
 	@Override
 	public void onStart(IContext context) throws JFException {
 		this.context = context;
-		
+
 		changeState(recignizeState());
 	}
 
@@ -104,22 +103,26 @@ public class StateMachine implements IStrategy {
 		Signal bestSignal = new Signal();
 		for (State nextState : StateMachine.state.nextStates()) { // instantiate
 																	// all
-																	// states!!
-			logger.debug("checking state: " + nextState.getName());
-
+																	// states!
 			Signal nextSignal = nextState.signalStrength(instrument, tick, StateMachine.state);
-			logger.debug(nextState.getName() + " signal strength: " + nextSignal.getValue());
-			if (nextSignal.getValue() > bestSignal.getValue()) {
-				bestState = nextState;
-				bestSignal = nextSignal;
-				logger.debug(nextState.getName() + " is the new max with " + nextSignal.getValue());
+			if (nextSignal.getValue() != 0) {
+				logger.debug(nextState.getName() + " signal is " + nextSignal.getValue() + "(" + instrument.name()
+						+ ")");
+				if (nextSignal.getValue() > bestSignal.getValue()) {
+					bestState = nextState;
+					bestSignal = nextSignal;
+				}
 			}
 		}
 		if (bestState != null) {
+			logger.info(bestState.getName() + " state is selected(from " + bestSignal.getValue() + ","
+					+ bestSignal.getTag());
 			bestState.prepareCommands(bestSignal);
 			if (bestState.executeCommands()) {
 				changeState(bestState);
 			}
+		} else {
+			Main.massInfo(logger, "Searching for promising state(s)...");
 		}
 	}
 
@@ -142,7 +145,13 @@ public class StateMachine implements IStrategy {
 
 	@Override
 	public void onStop() throws JFException {
-		// TODO Auto-generated method stub
+		if (context.getEngine().getOrders().size() != 0) {
+			for (IOrder o : StateMachine.getInstance().getOrders()) {
+				logger.info("profit for #" + o.getId() + " is $" + o.getProfitLossInUSD());
+			}
+			logger.error("Closing all remaining orders!");
+			context.getEngine().closeOrders(context.getEngine().getOrders());
+		}
 
 	}
 
