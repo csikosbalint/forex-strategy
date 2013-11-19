@@ -9,6 +9,7 @@ import hu.fnf.devel.forex.utils.Signal;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.dukascopy.api.IBar;
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
 import com.dukascopy.api.JFException;
@@ -22,8 +23,10 @@ public abstract class State {
 	protected Set<Instrument> instruments;
 	protected Set<Period> periods;
 	protected Set<Command> commands;
-
+	
 	public abstract Signal signalStrength(Instrument instrument, ITick tick, State actual) throws JFException;
+
+	public abstract Signal signalStrength(Instrument instrument, Period period, IBar askBar, IBar bidBar,  State actual) throws JFException;
 
 	public void prepareCommands(Signal signal) {
 		switch (signal.getTag()) {

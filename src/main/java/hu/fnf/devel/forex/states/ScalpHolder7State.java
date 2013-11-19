@@ -8,6 +8,7 @@ import java.util.HashSet;
 
 import org.apache.log4j.Logger;
 
+import com.dukascopy.api.IBar;
 import com.dukascopy.api.IContext;
 import com.dukascopy.api.IEngine;
 import com.dukascopy.api.IEngine.OrderCommand;
@@ -41,7 +42,8 @@ public class ScalpHolder7State extends State {
 	}
 
 	private Signal signalStrength(Instrument instrument, ITick tick) throws JFException {
-		if (!instruments.contains(instrument)) {
+		if ( true ) {
+		//if (!instruments.contains(instrument)) {
 			Signal ret = new Signal();
 			ret.setValue(0);
 			return ret;
@@ -73,7 +75,9 @@ public class ScalpHolder7State extends State {
 			}
 		}
 
-		if (closedMarkets.toString().split(",").length > 1) { // from T opens till NY closes
+		if (closedMarkets.toString().split(",").length > 1) { // from T opens
+																// till NY
+																// closes
 			Main.massDebug(logger, closedMarkets.toString() + " market is closed.");
 			return ret;
 		}
@@ -121,10 +125,6 @@ public class ScalpHolder7State extends State {
 					ret.setType(OrderCommand.BUY);
 					ret.setValue(2);
 
-				} else {
-					logger.debug("No buy");
-					logger.debug("    red:  \t" + red[2] + " < ask: " + (tick.getAsk()));
-					logger.debug("    yellow:  \t" + (yellow[2]) + " > ask: " + (tick.getAsk()));
 				}
 			} catch (JFException e) {
 				throw new JFException("Error during buy calculation.", e);
@@ -147,16 +147,10 @@ public class ScalpHolder7State extends State {
 
 					ret.setValue(2);
 
-				} else {
-					logger.debug("No sell");
-					logger.debug("    red:\t" + red[0] + " > bid: "
-							+ (tick.getBid()));
-					logger.debug("    yellow:  \t" + (yellow[0]) + " < bid: " + (tick.getBid()));
 				}
 			} catch (JFException e) {
 				throw new JFException("Error during sell calculation.", e);
 			}
-			logger.debug("retval is " + ret.getType() + "(" + ret.getValue() + ")");
 			return ret;
 		} else {
 			/*
@@ -232,6 +226,13 @@ public class ScalpHolder7State extends State {
 								/ StateMachine.getInstance().getOrders().get(0).getInstrument().getPipValue()));
 			}
 		}
+		return ret;
+	}
+
+	@Override
+	public Signal signalStrength(Instrument instrument, Period period, IBar askBar, IBar bidBar, State actual) {
+		Signal ret = new Signal();
+		ret.setValue(0);
 		return ret;
 	}
 }

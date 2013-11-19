@@ -15,7 +15,7 @@ public class MarketWebProxy implements Info {
 
 	public MarketWebProxy() throws IOException {
 		Document doc = Jsoup.connect(marketOpenTimeUri).get();
-		logger.debug("Downloading market open info from " + marketOpenTimeUri + " ..");
+		logger.debug("Downloading market info: " + marketOpenTimeUri + " ..");
 		market_open_row = doc.getElementsByClass("market_open_row");
 		logger.debug("Download completed. Info is now fresh!");
 	}
