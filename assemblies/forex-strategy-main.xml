@@ -10,17 +10,5 @@
 			<unpack>true</unpack>
 			<scope>runtime</scope>
 		</dependencySet>
-	</dependencySets>
-	<fileSets>
-		<!-- copy compiled class files -->
-		<fileSet>
-			<directory>${project.build.outputDirectory}/singlejartest</directory>
-			<outputDirectory>singlejartest</outputDirectory>
-		</fileSet>
-		<!-- optional: copy java source files -->
-		<fileSet>
-			<directory>${project.build.sourceDirectory}/singlejartest</directory>
-			<outputDirectory>singlejartest</outputDirectory>
-		</fileSet>
-	</fileSets>	
+	</dependencySets>	
 </assembly>

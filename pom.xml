@@ -7,6 +7,9 @@
 	<name>forex-strategy</name>
 	<packaging>jar</packaging>
 	<description></description>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
 	<organization>
 		<name>FNF</name>
 		<url>http://devel.fnf.hu</url>
@@ -50,7 +53,6 @@
 		</dependency>
 	</dependencies>
 	<build>
-		<!-- <sourceDirectory>src</sourceDirectory> -->
 		<resources>
 			<resource>
 				<directory>res</directory>
@@ -68,7 +70,6 @@
 						<target>1.6</target>
 						<compilerArgument></compilerArgument>
 						<fork>true</fork>
-						<encoding>UTF-8</encoding>
 					</configuration>
 				</plugin>
 				<plugin>

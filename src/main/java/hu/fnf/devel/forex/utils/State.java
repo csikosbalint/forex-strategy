@@ -1,10 +1,9 @@
-package hu.fnf.devel.forex.states;
+package hu.fnf.devel.forex.utils;
 
 import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.commands.CloseAllCommand;
 import hu.fnf.devel.forex.commands.Command;
 import hu.fnf.devel.forex.commands.OpenCommand;
-import hu.fnf.devel.forex.utils.Signal;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -22,16 +21,21 @@ public abstract class State {
 
 	protected Set<Instrument> instruments;
 	protected Set<Period> periods;
+	protected Criterion open;
+	protected Criterion close;
 	protected Set<Command> commands;
-	
-	public abstract Signal signalStrength(Instrument instrument, ITick tick, State actual) throws JFException;
 
-	public abstract Signal signalStrength(Instrument instrument, Period period, IBar askBar, IBar bidBar,  State actual) throws JFException;
+	public abstract Signal getSignal(Instrument instrument, ITick tick, State actual) throws JFException;
+
+	public abstract Signal getSignal(Instrument instrument, Period period, IBar askBar, IBar bidBar, State actual)
+			throws JFException;
+
+	public abstract Set<State> getNextStates();
 
 	public void prepareCommands(Signal signal) {
 		switch (signal.getTag()) {
 		case StateMachine.OPEN:
-			commands.add(new OpenCommand(signal));
+			commands.add(new OpenCommand(signal, getName()));
 			break;
 		case StateMachine.CLOSE:
 			commands.add(new CloseAllCommand());
@@ -52,13 +56,6 @@ public abstract class State {
 		return true;
 	}
 
-	public Set<State> nextStates() {
-		Set<State> ret = new HashSet<State>();
-		ret.add(new SignalSeekerState());
-
-		return ret;
-	}
-	
 	public boolean onArriving() {
 		return true;
 	}
@@ -89,5 +86,13 @@ public abstract class State {
 
 	public Set<Instrument> getInstruments() {
 		return instruments;
+	}
+
+	public Criterion getClose() {
+		return close;
+	}
+
+	public Criterion getOpen() {
+		return open;
 	}
 }

@@ -5,11 +5,22 @@ import com.dukascopy.api.Instrument;
 
 public class Signal {
 	
-	private int value;
+	private double 		value;
 	private OrderCommand type;
-	private Instrument instrument;
-	private double amount;
-	private int tag;
+	private Instrument 	instrument;
+	private double 		amount;
+	private int 		tag;
+	
+	public Signal() {
+		// TODO Auto-generated constructor stub
+	}
+
+	public Signal(Instrument instrument, double amount, int tag) {
+		super();
+		this.instrument = instrument;
+		this.amount = amount;
+		this.tag = tag;
+	}
 
 	public void setTag(int tag) {
 		this.tag = tag;
@@ -19,11 +30,11 @@ public class Signal {
 		return tag;
 	}
 
-	public int getValue() {
+	public double getValue() {
 		return value;
 	}
 
-	public void setValue(int value) {
+	public void setValue(double value) {
 		this.value = value;
 	}
 
@@ -51,4 +62,8 @@ public class Signal {
 		this.amount = amount;
 	}
 
-}
+	void add(Signal b) {
+		double aval = getValue();
+		setValue(aval+b.getValue());
+	}
+} 

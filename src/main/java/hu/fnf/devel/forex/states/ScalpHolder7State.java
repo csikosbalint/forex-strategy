@@ -2,9 +2,13 @@ package hu.fnf.devel.forex.states;
 
 import hu.fnf.devel.forex.Main;
 import hu.fnf.devel.forex.StateMachine;
+import hu.fnf.devel.forex.criteria.MACDClose;
+import hu.fnf.devel.forex.criteria.MarketCriterion;
 import hu.fnf.devel.forex.utils.Signal;
+import hu.fnf.devel.forex.utils.State;
 
 import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -29,21 +33,26 @@ public class ScalpHolder7State extends State {
 
 	public ScalpHolder7State() {
 		super("ScalpHolderState");
-		// config
-		instruments = new HashSet<Instrument>();
-		// instruments.add(Instrument.GBPJPY);
-		instruments.add(Instrument.USDJPY);
-		instruments.add(Instrument.EURJPY);
+		String[] markets = { "London", "New York", "Tokyo" };
+		/*
+		 * config
+		 */
+		this.instruments.add(Instrument.GBPJPY);
+		this.instruments.add(Instrument.USDJPY);
+		this.instruments.add(Instrument.EURJPY);
+		
+		this.periods	.add(Period.ONE_HOUR);		
+		
 	}
 
 	@Override
-	public Signal signalStrength(Instrument instrument, ITick tick, State actual) throws JFException {
-		return signalStrength(instrument, tick);
+	public Signal getSignal(Instrument instrument, ITick tick, State actual) throws JFException {
+		return getSignal(instrument, tick);
 	}
 
-	private Signal signalStrength(Instrument instrument, ITick tick) throws JFException {
-		if ( true ) {
-		//if (!instruments.contains(instrument)) {
+	private Signal getSignal(Instrument instrument, ITick tick) throws JFException {
+//		if ( true ) {
+		if (!instruments.contains(instrument)) {
 			Signal ret = new Signal();
 			ret.setValue(0);
 			return ret;
@@ -66,22 +75,7 @@ public class ScalpHolder7State extends State {
 			}
 			return ret;
 		}
-		// no trade out of london, new york, tokyo session time
-		String[] markets = { "London", "New York", "Tokyo" };
-		StringBuilder closedMarkets = new StringBuilder();
-		for (int i = 0; i < markets.length; i++) {
-			if (!Main.isMarketOpen(markets[i])) {
-				closedMarkets.append(markets[i] + ",");
-			}
-		}
-
-		if (closedMarkets.toString().split(",").length > 1) { // from T opens
-																// till NY
-																// closes
-			Main.massDebug(logger, closedMarkets.toString() + " market is closed.");
-			return ret;
-		}
-
+		
 		// TODO: in this point order anomailes have to be handeled
 
 		if (StateMachine.getInstance().getOrders().size() == 0) {
@@ -230,9 +224,16 @@ public class ScalpHolder7State extends State {
 	}
 
 	@Override
-	public Signal signalStrength(Instrument instrument, Period period, IBar askBar, IBar bidBar, State actual) {
+	public Signal getSignal(Instrument instrument, Period period, IBar askBar, IBar bidBar, State actual) {
 		Signal ret = new Signal();
 		ret.setValue(0);
 		return ret;
+	}
+
+	@Override
+	public Set<State> getNextStates() {
+		Set<State> nextstates = new HashSet<State>();
+		nextstates.add(new SignalSeekerState());
+		return nextstates;
 	}
 }

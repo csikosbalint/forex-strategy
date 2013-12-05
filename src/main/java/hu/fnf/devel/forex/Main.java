@@ -1,6 +1,9 @@
 package hu.fnf.devel.forex;
 
+import hu.fnf.devel.forex.states.MACDSample452State;
+import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.utils.Info;
+import hu.fnf.devel.forex.utils.State;
 import hu.fnf.devel.forex.utils.WebInfo;
 
 import java.awt.Dimension;
@@ -29,8 +32,7 @@ import org.apache.log4j.PropertyConfigurator;
 import com.dukascopy.api.DataType;
 import com.dukascopy.api.Filter;
 import com.dukascopy.api.IChart;
-import com.dukascopy.api.IContext;
-import com.dukascopy.api.IStrategies;
+import com.dukascopy.api.IOrder;
 import com.dukascopy.api.Instrument;
 import com.dukascopy.api.LoadingProgressListener;
 import com.dukascopy.api.OfferSide;
@@ -51,15 +53,22 @@ import com.dukascopy.api.system.tester.ITesterUserInterface;
 public class Main {
 
 	/**
-	 * 
+	 * login variables
+	 */
+	public final static String jnlpUrl = "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
+	public final static String userName = "DEMO10037VbnccEU";
+	public final static String password = "Vbncc";
+
+	/**
+	 * global variables
 	 */
 	private static final Logger logger = Logger.getLogger(Main.class);
-	private static String jnlpUrl = "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
-	private static String userName = "DEMO10037VbnccEU";
-	private static String password = "Vbncc";
 	private static IClient client;
 	private static Info info;
-
+	private static IOrder lastOrder;
+	/**
+	 * logging variables
+	 */
 	private static String phase;
 	private static String lastDLog;
 	private static String lastILog;
@@ -81,6 +90,14 @@ public class Main {
 
 	public static String getPhase() {
 		return phase + " ";
+	}
+
+	public static IOrder getLastOrder() {
+		return lastOrder;
+	}
+
+	public static void setLastOrder(IOrder lastOrder) {
+		Main.lastOrder = lastOrder;
 	}
 
 	public static void main(String[] args) {
@@ -214,7 +231,7 @@ public class Main {
 		args[0] = "/home/johnnym/git/forex-strategy/res/log4j.properties";
 		args[1] = "test";
 
-		TesterMainGUIMode2 gui = new TesterMainGUIMode2();
+		TesterMainGUI gui = new TesterMainGUI();
 		try {
 			gui.main(args);
 		} catch (Exception e) {
@@ -226,14 +243,13 @@ public class Main {
 }
 
 @SuppressWarnings("serial")
-class TesterMainGUIMode2 extends JFrame implements ITesterUserInterface, ITesterExecution {
-	private final Logger logger = Logger.getLogger(TesterMainGUIMode2.class);
+class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecution {
+	private final Logger logger = Logger.getLogger(TesterMainGUI.class);
 
 	private final int frameWidth = 1000;
 	private final int frameHeight = 600;
 	private final int controlPanelHeight = 40;
 
-	private JPanel currentChartPanel = null;
 	private ITesterExecutionControl executionControl = null;
 
 	private JPanel controlPanel = null;
@@ -242,17 +258,11 @@ class TesterMainGUIMode2 extends JFrame implements ITesterUserInterface, ITester
 	private JButton continueButton = null;
 	private JButton cancelButton = null;
 
-	private String jnlpUrl = "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
-	private String userName = "DEMO10037VbnccEU";
-	private String password = "Vbncc";
-
-	private IContext context;
-
-	public TesterMainGUIMode2() {
+	public TesterMainGUI() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 	}
-	
+
 	@Override
 	public void setChartPanels(Map<IChart, ITesterGui> chartPanels) {
 		setTitle("Tester");
@@ -260,61 +270,39 @@ class TesterMainGUIMode2 extends JFrame implements ITesterUserInterface, ITester
 		if (chartPanels != null && chartPanels.size() > 0) {
 			for (IChart chart : chartPanels.keySet()) {
 				StateMachine.getInstance().addChart(chart);
-				if (context != null) {
-					chart.add(context.getIndicators().getIndicator("RSI"), new Object[] { 15 });
-				} else {
-					logger.info("context is null");
-				}
 				logger.debug("Chart for instrument " + chart.getInstrument().toString());
 				Instrument instrument = chart.getInstrument();
 
 				// show ticks for EURUSD and 10 min bars for other instruments
 				IFeedDescriptor feedDescriptor = new FeedDescriptor();
-				if (chart.getInstrument().equals(Instrument.EURUSD)) {
+
+				if ((new MACDSample452State()).getInstruments().contains(chart.getInstrument())) {
+					// chart.getInstrument().equals(Instrument.EURUSD) ||
+					// chart.getInstrument().equals(Instrument.GBPJPY)) {
 					/*
 					 * MACDSample452
 					 */
-					feedDescriptor.setInstrument(Instrument.EURUSD);
+					// feedDescriptor.setInstrument(Instrument.EURUSD);
 					feedDescriptor.setPeriod(Period.ONE_HOUR);
 				} else {
 					/*
 					 * Scalper7
 					 */
-					feedDescriptor.setInstrument(Instrument.USDJPY);
+					feedDescriptor.setInstrument(chart.getInstrument());
 					feedDescriptor.setPeriod(Period.ONE_MIN);
 				}
 				feedDescriptor.setDataType(DataType.TIME_PERIOD_AGGREGATION);
 				feedDescriptor.setInstrument(instrument);
 				feedDescriptor.setOfferSide(OfferSide.BID);
-				
-
 				feedDescriptor.setFilter(Filter.WEEKENDS);
-				chartPanels.get(chart).getTesterChartController().addOHLCInformer();
-				chartPanels.get(chart).getTesterChartController().setFeedDescriptor(feedDescriptor);
 
+				chartPanels.get(chart).getTesterChartController().setFeedDescriptor(feedDescriptor);
+				chartPanels.get(chart).getTesterChartController().setChartAutoShift();
 				JPanel chartPanel = chartPanels.get(chart).getChartPanel();
 				addChartPanel(chartPanel);
 			}
 		}
 		return;
-		// if (chartPanels != null && chartPanels.size() > 0) {
-		// IChart chart = chartPanels.keySet().iterator().next();
-		// Instrument instrument = chart.getInstrument();
-		//
-		// IFeedDescriptor feedDescriptor = new FeedDescriptor();
-		// feedDescriptor.setDataType(DataType.TIME_PERIOD_AGGREGATION);
-		// feedDescriptor.setOfferSide(OfferSide.BID);
-		// feedDescriptor.setInstrument(Instrument.USDJPY);
-		// feedDescriptor.setPeriod(Period.ONE_MIN);
-		// feedDescriptor.setFilter(Filter.WEEKENDS);
-		// chartPanels.get(chart).getTesterChartController().setFeedDescriptor(feedDescriptor);
-		//
-		// setTitle(instrument.toString() + " " + chart.getSelectedOfferSide() +
-		// " " + chart.getSelectedPeriod());
-		//
-		// JPanel chartPanel = chartPanels.get(chart).getChartPanel();
-		// addChartPanel(chartPanel);
-		// }
 	}
 
 	@Override
@@ -327,7 +315,7 @@ class TesterMainGUIMode2 extends JFrame implements ITesterUserInterface, ITester
 		final ITesterClient client = TesterFactory.getDefaultInstance();
 		// set the listener that will receive system events
 		client.setSystemListener(new ISystemListener() {
-			
+
 			@Override
 			public void onStart(long processId) {
 				logger.info("Strategy started: " + processId);
@@ -369,7 +357,7 @@ class TesterMainGUIMode2 extends JFrame implements ITesterUserInterface, ITester
 		logger.info("Connecting...");
 		// connect to the server using jnlp, user name and password
 		// connection is needed for data downloading
-		client.connect(jnlpUrl, userName, password);
+		client.connect(Main.jnlpUrl, Main.userName, Main.password);
 
 		// wait for it to connect
 		int i = 50; // wait max ten seconds
@@ -384,11 +372,16 @@ class TesterMainGUIMode2 extends JFrame implements ITesterUserInterface, ITester
 
 		// set instruments that will be used in testing
 		final Set<Instrument> instruments = new HashSet<Instrument>();
-		instruments.add(Instrument.USDJPY);
-		instruments.add(Instrument.EURUSD);
-
+		State startState = new SignalSeekerState();
+		for (State state : startState.getNextStates()) {
+			instruments.addAll(state.getInstruments());
+		}
 		logger.info("Subscribing instruments...");
 		client.setSubscribedInstruments(instruments);
+		for (Instrument inst : instruments) {
+			logger.debug("\t-" + inst.name());
+		}
+
 		// setting initial deposit
 		client.setInitialDeposit(Instrument.EURUSD.getSecondaryCurrency(), 50000);
 		final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
@@ -426,11 +419,6 @@ class TesterMainGUIMode2 extends JFrame implements ITesterUserInterface, ITester
 			}
 		}, this, this);
 		// now it's running
-		while ( StateMachine.getInstance().getContext() == null ) {
-			Thread.sleep(1000);
-		}
-		context = StateMachine.getInstance().getContext();
-		logger.info("context is set");
 	}
 
 	/**
@@ -453,7 +441,7 @@ class TesterMainGUIMode2 extends JFrame implements ITesterUserInterface, ITester
 	private void addChartPanel(JPanel chartPanel) {
 		// removecurrentChartPanel();
 
-		this.currentChartPanel = chartPanel;
+		// this.currentChartPanel = chartPanel;
 		chartPanel.setPreferredSize(new Dimension(frameWidth, frameHeight - controlPanelHeight));
 		chartPanel.setMinimumSize(new Dimension(frameWidth, 200));
 		chartPanel.setMaximumSize(new Dimension(Short.MAX_VALUE, Short.MAX_VALUE));
@@ -555,22 +543,6 @@ class TesterMainGUIMode2 extends JFrame implements ITesterUserInterface, ITester
 		cancelButton.setEnabled(false);
 	}
 
-	// private void removecurrentChartPanel() {
-	// if (this.currentChartPanel != null) {
-	// try {
-	// SwingUtilities.invokeAndWait(new Runnable() {
-	// @Override
-	// public void run() {
-	// TesterMainGUIMode2.this.getContentPane().remove(TesterMainGUIMode2.this.currentChartPanel);
-	// TesterMainGUIMode2.this.getContentPane().repaint();
-	// }
-	// });
-	// } catch (Exception e) {
-	// LOGGER.error(e.getMessage(), e);
-	// }
-	// }
-	// }
-
 	public void showChartFrame() {
 		setSize(frameWidth, frameHeight);
 		centerFrame();
@@ -579,7 +551,7 @@ class TesterMainGUIMode2 extends JFrame implements ITesterUserInterface, ITester
 	}
 
 	public void main(String[] args) throws Exception {
-		TesterMainGUIMode2 testerMainGUI = new TesterMainGUIMode2();
+		TesterMainGUI testerMainGUI = new TesterMainGUI();
 		testerMainGUI.showChartFrame();
 	}
 }
