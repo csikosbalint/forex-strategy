@@ -8,6 +8,8 @@ import hu.fnf.devel.forex.commands.OpenCommand;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 import com.dukascopy.api.IBar;
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
@@ -15,6 +17,7 @@ import com.dukascopy.api.JFException;
 import com.dukascopy.api.Period;
 
 public abstract class State {
+	protected static final Logger logger = Logger.getLogger(State.class);
 
 	protected String name;
 	protected Signal signal;
@@ -32,6 +35,8 @@ public abstract class State {
 
 	public abstract Set<State> getNextStates();
 
+	public abstract double getAmount();
+
 	public void prepareCommands(Signal signal) {
 		switch (signal.getTag()) {
 		case StateMachine.OPEN:
@@ -44,14 +49,16 @@ public abstract class State {
 		}
 	}
 
-	public boolean executeCommands() throws JFException {
+	public boolean executeCommands() {
 		for (Command c : commands) {
 			try {
 				c.execute();
 			} catch (JFException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 				return false;
 			}
+			return true;
 		}
 		return true;
 	}

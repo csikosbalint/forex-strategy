@@ -1,14 +1,12 @@
 package hu.fnf.devel.forex.commands;
 
-import org.apache.log4j.Logger;
-
-import com.dukascopy.api.IEngine;
-import com.dukascopy.api.IOrder;
-import com.dukascopy.api.JFException;
-
-import hu.fnf.devel.forex.Main;
 import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.utils.Signal;
+
+import org.apache.log4j.Logger;
+
+import com.dukascopy.api.IOrder;
+import com.dukascopy.api.JFException;
 
 public class OpenCommand implements Command {
 	/**
@@ -29,12 +27,20 @@ public class OpenCommand implements Command {
 				.submitOrder(label, signal.getInstrument(), signal.getType(), signal.getAmount());
 		logger.info("Order " + order.getInstrument().name() + "/" + order.getOrderCommand().name()
 				+ " has been submitted with amount " + order.getAmount());
-		if (!StateMachine.getInstance().getContext().getEngine().getType().equals(IEngine.Type.TEST)) {
-			while (!order.getState().equals(IOrder.State.FILLED)) {
-				logger.debug("state: " + order.getState().toString() + " ... waiting.");
-			}
-		}
-		logger.info("Order #" + order.getId() + " filled!");
-		Main.setLastOrder(order);
+		// TODO: bug, if I ask for .getState() I often get NullPointerEx printed but no real Ex
+		// Workaround is to wait a sec
+//		try {
+//			logger.debug("sleeping..15s");
+//			Thread.sleep(15000);
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		if (!order.getState().equals(IOrder.State.OPENED)) {
+//		logger.info("oder state: " + order.getState());
+//			throw new JFException(JFException.Error.ORDER_INCORRECT);
+//		}
+		
+		StateMachine.getInstance().pushDatabase(order, signal.getPeriod());
 	}
 }

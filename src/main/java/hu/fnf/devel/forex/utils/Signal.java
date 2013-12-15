@@ -2,6 +2,7 @@ package hu.fnf.devel.forex.utils;
 
 import com.dukascopy.api.IEngine.OrderCommand;
 import com.dukascopy.api.Instrument;
+import com.dukascopy.api.Period;
 
 public class Signal {
 	
@@ -10,9 +11,18 @@ public class Signal {
 	private Instrument 	instrument;
 	private double 		amount;
 	private int 		tag;
+	private Period		period;
 	
 	public Signal() {
 		// TODO Auto-generated constructor stub
+	}
+	
+	public void setPeriod(Period period) {
+		this.period = period;
+	}
+	
+	public Period getPeriod() {
+		return period;
 	}
 
 	public Signal(Instrument instrument, double amount, int tag) {

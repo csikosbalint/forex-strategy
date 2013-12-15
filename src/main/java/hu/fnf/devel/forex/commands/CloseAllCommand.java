@@ -23,7 +23,10 @@ public class CloseAllCommand implements Command {
 					return;
 				}
 			}
-			StateMachine.getInstance().getContext().getEngine().closeOrders(StateMachine.getInstance().getOrders());
+			
+			StateMachine.getInstance().getContext().getEngine().closeOrders(
+					StateMachine.getInstance().getOrders());
+			logger.info("actual balance is $" + StateMachine.getInstance().getContext().getAccount().getBalance());
 		}
 	}
 

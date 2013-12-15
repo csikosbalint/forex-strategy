@@ -1,19 +1,16 @@
 package hu.fnf.devel.forex.states;
 
 import hu.fnf.devel.forex.StateMachine;
-import hu.fnf.devel.forex.utils.Criterion;
 import hu.fnf.devel.forex.utils.Signal;
 import hu.fnf.devel.forex.utils.State;
 
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import com.dukascopy.api.IBar;
 import com.dukascopy.api.IEngine;
-import com.dukascopy.api.IEngine.OrderCommand;
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
 import com.dukascopy.api.JFException;
@@ -43,7 +40,6 @@ public class SignalSeekerState extends State {
 			/*
 			 * subscribe to instruments related to next states
 			 */
-
 			instruments = new HashSet<Instrument>();
 			for (State s : getNextStates()) {
 				for (Instrument i : s.getInstruments()) {
@@ -73,16 +69,19 @@ public class SignalSeekerState extends State {
 	public Signal getSignal(Instrument instrument, ITick tick, State actual) throws JFException {
 		if (actual.getInstruments().contains(instrument)) {
 			if (actual instanceof ScalpHolder7State || actual instanceof MACDSample452State) {
-				/*
-				 * close strategy for ScalpHolder7State MACDSample452State
-				 */
-				Signal challenge = new Signal(instrument, StateMachine.getInstance().getOrders().get(0).getAmount(),
-						StateMachine.CLOSE);
-
-				double max = actual.getClose().getMax();
-				double act = actual.getClose().calcProbability(challenge, tick, actual);
-				challenge.setValue(act/max);
-				return challenge;
+				if (StateMachine.getInstance().getOrders().size() > 0) {
+					/*
+					 * close strategy for ScalpHolder7State, MACDSample452State
+					 */
+					Signal challenge = new Signal(instrument,
+							StateMachine.getInstance().getOrders().get(0).getAmount(), StateMachine.CLOSE);
+					challenge.setPeriod(StateMachine.getInstance().getPeriod(StateMachine.getInstance().getOrders().get(0)));
+					
+					double max = actual.getClose().getMax();
+					double act = actual.getClose().calcProbability(challenge, tick, actual);
+					challenge.setValue(act / max);
+					return challenge;
+				}
 			}
 		}
 		return null;
@@ -97,9 +96,15 @@ public class SignalSeekerState extends State {
 	@Override
 	public Set<State> getNextStates() {
 		Set<State> nextstates = new HashSet<State>();
-		//nextstates.add(new ScalpHolder7State());
+		nextstates.add(new ScalpHolder7State());
 		nextstates.add(new MACDSample452State());
 		return nextstates;
+	}
+
+	@Override
+	public double getAmount() {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 }

@@ -1,6 +1,7 @@
 package hu.fnf.devel.forex;
 
 import hu.fnf.devel.forex.states.MACDSample452State;
+import hu.fnf.devel.forex.states.ScalpHolder7State;
 import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.utils.Info;
 import hu.fnf.devel.forex.utils.State;
@@ -32,7 +33,6 @@ import org.apache.log4j.PropertyConfigurator;
 import com.dukascopy.api.DataType;
 import com.dukascopy.api.Filter;
 import com.dukascopy.api.IChart;
-import com.dukascopy.api.IOrder;
 import com.dukascopy.api.Instrument;
 import com.dukascopy.api.LoadingProgressListener;
 import com.dukascopy.api.OfferSide;
@@ -55,9 +55,10 @@ public class Main {
 	/**
 	 * login variables
 	 */
-	public final static String jnlpUrl = "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
-	public final static String userName = "DEMO10037VbnccEU";
-	public final static String password = "Vbncc";
+	//public final static String jnlpUrl = "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
+	public final static String jnlpUrl = "https://eu-demo.dukascopy.com/fo/platform/jForex";
+	public final static String userName = "DEMO10037EfVQZEU";
+	public final static String password = "EfVQZ";
 
 	/**
 	 * global variables
@@ -65,17 +66,12 @@ public class Main {
 	private static final Logger logger = Logger.getLogger(Main.class);
 	private static IClient client;
 	private static Info info;
-	private static IOrder lastOrder;
 	/**
 	 * logging variables
 	 */
 	private static String phase;
 	private static String lastDLog;
 	private static String lastILog;
-
-	/**
-	 * GUI
-	 */
 
 	public static void setPhase(String phase) {
 		if (Main.phase != null) {
@@ -90,14 +86,6 @@ public class Main {
 
 	public static String getPhase() {
 		return phase + " ";
-	}
-
-	public static IOrder getLastOrder() {
-		return lastOrder;
-	}
-
-	public static void setLastOrder(IOrder lastOrder) {
-		Main.lastOrder = lastOrder;
 	}
 
 	public static void main(String[] args) {
@@ -228,8 +216,8 @@ public class Main {
 
 	public static void test() {
 		String[] args = new String[2];
-		args[0] = "/home/johnnym/git/forex-strategy/res/log4j.properties";
-		args[1] = "test";
+		//args[0] = "/home/johnnym/git/forex-strategy/res/log4j.properties";
+		//args[1] = "test";
 
 		TesterMainGUI gui = new TesterMainGUI();
 		try {
@@ -269,30 +257,24 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 
 		if (chartPanels != null && chartPanels.size() > 0) {
 			for (IChart chart : chartPanels.keySet()) {
+				if( chart.getInstrument().equals(Instrument.EURUSD)) {
+					continue;
+				}
 				StateMachine.getInstance().addChart(chart);
 				logger.debug("Chart for instrument " + chart.getInstrument().toString());
-				Instrument instrument = chart.getInstrument();
 
 				// show ticks for EURUSD and 10 min bars for other instruments
 				IFeedDescriptor feedDescriptor = new FeedDescriptor();
 
-				if ((new MACDSample452State()).getInstruments().contains(chart.getInstrument())) {
-					// chart.getInstrument().equals(Instrument.EURUSD) ||
-					// chart.getInstrument().equals(Instrument.GBPJPY)) {
-					/*
-					 * MACDSample452
-					 */
-					// feedDescriptor.setInstrument(Instrument.EURUSD);
-					feedDescriptor.setPeriod(Period.ONE_HOUR);
-				} else {
-					/*
-					 * Scalper7
-					 */
-					feedDescriptor.setInstrument(chart.getInstrument());
-					feedDescriptor.setPeriod(Period.ONE_MIN);
-				}
+//				if ((new ScalpHolder7State()).getInstruments().contains(chart.getInstrument()) && 
+//						!(new MACDSample452State()).getInstruments().contains(chart.getInstrument())) {
+//						feedDescriptor.setPeriod(Period.ONE_MIN);
+//				} else {
+//					feedDescriptor.setPeriod(Period.ONE_HOUR);
+//				}
+				feedDescriptor.setPeriod(Period.ONE_MIN);
 				feedDescriptor.setDataType(DataType.TIME_PERIOD_AGGREGATION);
-				feedDescriptor.setInstrument(instrument);
+				feedDescriptor.setInstrument(chart.getInstrument());
 				feedDescriptor.setOfferSide(OfferSide.BID);
 				feedDescriptor.setFilter(Filter.WEEKENDS);
 
@@ -320,11 +302,6 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 			public void onStart(long processId) {
 				logger.info("Strategy started: " + processId);
 				updateButtons();
-				if (StateMachine.getInstance().getContext() == null) {
-					logger.debug("context is null");
-				} else {
-					logger.debug("context is NOT null");
-				}
 			}
 
 			@Override
@@ -383,12 +360,12 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 		}
 
 		// setting initial deposit
-		client.setInitialDeposit(Instrument.EURUSD.getSecondaryCurrency(), 50000);
+		client.setInitialDeposit(Instrument.EURUSD.getSecondaryCurrency(), 1000);
 		final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
 		dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
 
-		Date dateFrom = dateFormat.parse("10/01/2013 00:00:00");
-		Date dateTo = dateFormat.parse("10/31/2013 00:00:00");
+		Date dateFrom = dateFormat.parse("11/01/2013 00:00:00");
+		Date dateTo = dateFormat.parse("11/31/2013 00:00:00");
 		client.setDataInterval(DataLoadingMethod.ALL_TICKS, dateFrom.getTime(), dateTo.getTime());
 		// client.setDataInterval(Period.FIFTEEN_MINS, OfferSide.BID,
 		// InterpolationMethod.CLOSE_TICK, dateFrom.getTime(),
@@ -551,6 +528,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 	}
 
 	public void main(String[] args) throws Exception {
+//		startStrategy();
 		TesterMainGUI testerMainGUI = new TesterMainGUI();
 		testerMainGUI.showChartFrame();
 	}
