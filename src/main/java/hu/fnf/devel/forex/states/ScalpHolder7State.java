@@ -1,7 +1,6 @@
 package hu.fnf.devel.forex.states;
 
 import hu.fnf.devel.forex.StateMachine;
-import hu.fnf.devel.forex.criteria.BadLuckPanic;
 import hu.fnf.devel.forex.criteria.MoneyManagement;
 import hu.fnf.devel.forex.criteria.Scalp7Close;
 import hu.fnf.devel.forex.criteria.Scalp7Open;
@@ -30,7 +29,7 @@ public class ScalpHolder7State extends State {
 		 */
 		this.instruments.add(Instrument.GBPJPY);
 		this.instruments.add(Instrument.USDJPY);
-		//this.instruments.add(Instrument.EURJPY);
+		this.instruments.add(Instrument.EURJPY);
 
 		this.periods	.add(Period.ONE_MIN);
 
@@ -49,7 +48,7 @@ public class ScalpHolder7State extends State {
 	public Signal getSignal(Instrument instrument, ITick tick, State actual) throws JFException {
 		if (instruments.contains(instrument)) {
 			/*
-			 * close strategy
+			 * open strategy
 			 */
 			open.reset();
 			Signal challenge = new Signal(instrument, getAmount(), StateMachine.OPEN);

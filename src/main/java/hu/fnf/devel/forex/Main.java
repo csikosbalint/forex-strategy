@@ -122,14 +122,16 @@ public class Main {
 					}
 
 					public void onStart(long arg0) {
+						
 					}
 
 					public void onDisconnect() {
 						logger.info("Client has been disconnected...");
+						client.reconnect();
 					}
 
 					public void onConnect() {
-						logger.info("Client has been connected...");
+						logger.info("Client has been re-connected...");
 					}
 				});
 			} catch (Exception e) {
@@ -257,9 +259,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 
 		if (chartPanels != null && chartPanels.size() > 0) {
 			for (IChart chart : chartPanels.keySet()) {
-				if( chart.getInstrument().equals(Instrument.EURUSD)) {
-					continue;
-				}
+
 				StateMachine.getInstance().addChart(chart);
 				logger.debug("Chart for instrument " + chart.getInstrument().toString());
 
@@ -272,7 +272,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 //				} else {
 //					feedDescriptor.setPeriod(Period.ONE_HOUR);
 //				}
-				feedDescriptor.setPeriod(Period.ONE_MIN);
+				feedDescriptor.setPeriod(Period.FOUR_HOURS);
 				feedDescriptor.setDataType(DataType.TIME_PERIOD_AGGREGATION);
 				feedDescriptor.setInstrument(chart.getInstrument());
 				feedDescriptor.setOfferSide(OfferSide.BID);
@@ -360,11 +360,11 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 		}
 
 		// setting initial deposit
-		client.setInitialDeposit(Instrument.EURUSD.getSecondaryCurrency(), 1000);
+		client.setInitialDeposit(Instrument.EURUSD.getSecondaryCurrency(), 500);
 		final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
 		dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
 
-		Date dateFrom = dateFormat.parse("11/01/2013 00:00:00");
+		Date dateFrom = dateFormat.parse("01/01/2013 00:00:00");
 		Date dateTo = dateFormat.parse("11/31/2013 00:00:00");
 		client.setDataInterval(DataLoadingMethod.ALL_TICKS, dateFrom.getTime(), dateTo.getTime());
 		// client.setDataInterval(Period.FIFTEEN_MINS, OfferSide.BID,
@@ -477,7 +477,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 			public void actionPerformed(ActionEvent e) {
 				if (executionControl != null) {
 					executionControl.continueExecution();
-					updateButtons();
+//					updateButtons();
 				}
 			}
 		});
@@ -488,7 +488,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 			public void actionPerformed(ActionEvent e) {
 				if (executionControl != null) {
 					executionControl.cancelExecution();
-					updateButtons();
+//					updateButtons();
 				}
 			}
 		});

@@ -12,21 +12,18 @@ public class CloseAllCommand implements Command {
 
 	@Override
 	public void execute() throws JFException {
-		if (StateMachine.getInstance().getOrders().size() != 0) {
-			logger.info("closing all(" + StateMachine.getInstance().getOrders().size() + ") orders");
-
-			for (IOrder o : StateMachine.getInstance().getOrders()) {
-				if (o.getState() == IOrder.State.FILLED ) {
-				logger.info("profit for #" + o.getId() + " is " + o.getProfitLossInUSD() + "$");
+		if (StateMachine.getInstance().getContext().getEngine().getOrders().size() != 0) {
+			for (IOrder o : StateMachine.getInstance().getContext().getEngine().getOrders()) {
+				if (o.getState() == IOrder.State.FILLED) {
+					logger.info("Order #" + o.getId() + " closing with " + o.getProfitLossInUSD() + "$ / "
+							+ o.getProfitLossInPips());
 				} else {
 					logger.error("There are orders which are not FILLED!");
 					return;
 				}
 			}
-			
-			StateMachine.getInstance().getContext().getEngine().closeOrders(
-					StateMachine.getInstance().getOrders());
-			logger.info("actual balance is $" + StateMachine.getInstance().getContext().getAccount().getBalance());
+			StateMachine.getInstance().getContext().getEngine()
+					.closeOrders(StateMachine.getInstance().getContext().getEngine().getOrders());
 		}
 	}
 

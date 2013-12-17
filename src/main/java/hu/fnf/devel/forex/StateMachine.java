@@ -1,7 +1,5 @@
 package hu.fnf.devel.forex;
 
-import hu.fnf.devel.forex.states.MACDSample452State;
-import hu.fnf.devel.forex.states.ScalpHolder7State;
 import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.utils.RobotException;
 import hu.fnf.devel.forex.utils.Signal;
@@ -18,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.omg.IOP.IOR;
 
 import com.dukascopy.api.IAccount;
 import com.dukascopy.api.IBar;
@@ -30,6 +29,7 @@ import com.dukascopy.api.IStrategy;
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
 import com.dukascopy.api.JFException;
+import com.dukascopy.api.OfferSide;
 import com.dukascopy.api.Period;
 import com.dukascopy.api.drawings.IScreenLabelChartObject;
 import com.dukascopy.api.drawings.IScreenLabelChartObject.Corner;
@@ -39,28 +39,31 @@ public class StateMachine implements IStrategy {
 
 	public static final int OPEN = 0;
 	public static final int CLOSE = 1;
+	public static final int TREND = 2;
+	public static final int CHAOS = 3;
 	public static final double BRAVE_VALUE = 0.6;
+	private static final int maxOrderResubmitCount = 5;
 
 	private static StateMachine instance;
 	private static State state;
 	private static State nextState;
 	private static boolean stateLock = false;
 	private IContext context;
+	/*
+	 * id,period,strategy,status,resubmit
+	 */
 	private Map<IOrder, Period> database;
+	private ArrayList<IOrder> positions;
 	private double startBalance;
 
 	private Collection<IChart> charts = new ArrayList<IChart>();
+	private Map<IOrder, Integer> resubmitAttempts = new HashMap<IOrder, Integer>();
 
 	private StateMachine() {
 		database = new HashMap<IOrder, Period>();
-	}
-
-	public void setStartBalance(double startBalance) {
-		this.startBalance = startBalance;
-	}
-
-	public double getStartBalance() {
-		return startBalance;
+		positions = new ArrayList<IOrder>();
+		state = new SignalSeekerState();
+		logger.info("------------- initalize state -> " + StateMachine.state.getName() + " -------------");
 	}
 
 	/*
@@ -74,20 +77,37 @@ public class StateMachine implements IStrategy {
 	}
 
 	public static synchronized void changeState(State newState) throws RobotException {
-		if (newState == null) {
-			return;
-		}
-		if (StateMachine.state != null && !StateMachine.state.getName().equalsIgnoreCase(newState.getName())) {
-			logger.info("state change " + StateMachine.state.getName() + " -> " + newState.getName());
+		if (StateMachine.state != null && newState != null
+				&& !StateMachine.state.getName().equalsIgnoreCase(newState.getName())) {
+			/*
+			 * real state change
+			 */
+			logger.info("------------- " + StateMachine.state.getName() + " -> " + newState.getName()
+					+ " -------------");
 			if (!StateMachine.state.onLeaving()) {
 				throw new RobotException("cannot leave " + StateMachine.state.getName() + " state.");
 			}
+			if (!newState.onArriving()) {
+				throw new RobotException("cannot arrive to " + newState.getName() + " state.");
+			}
+			setState(newState);
+		} else {
+			/*
+			 * rollback or non-real state change
+			 */
+			// try {
+			// setNextState(null);
+			// } catch (JFException e) {
+			// // TODO Auto-generated catch block
+			// e.printStackTrace();
+			// }
+			setStateLock(false);
 		}
-		if (!newState.onArriving()) {
-			throw new RobotException("cannot arrive to " + newState.getName() + " state.");
-		}
-		setState(newState);
 	}
+
+	/*
+	 * --------- END ---------
+	 */
 
 	public static void setNextState(State nextState) throws JFException {
 		if (!isStateLock()) {
@@ -98,9 +118,14 @@ public class StateMachine implements IStrategy {
 		}
 	}
 
-	/*
-	 * --------- END ---------
-	 */
+	public void setStartBalance(double startBalance) {
+		this.startBalance = startBalance;
+	}
+
+	public double getStartBalance() {
+		return startBalance;
+	}
+
 	public static void setState(State state) {
 		StateMachine.state = state;
 		setStateLock(false);
@@ -123,20 +148,24 @@ public class StateMachine implements IStrategy {
 	}
 
 	public void pushDatabase(IOrder order, Period period) {
-		logger.debug("pushed to database.");
+		logger.debug("Order #" + order.getId() + " recorded to database.");
 		database.put(order, period);
+		resubmitAttempts.put(order, 1);
+		pushPosition(order);
+	}
+
+	public void removePosition(IOrder order) {
+		logger.debug("Order #" + order.getId() + " removed from memory.");
+		positions.remove(order);
+	}
+
+	public void pushPosition(IOrder order) {
+		logger.debug("Order #" + order.getId() + " pushed into memory.");
+		positions.add(order);
 	}
 
 	public Period getPeriod(IOrder order) {
 		return database.get(order);
-	}
-
-	public List<IOrder> getOrders() throws JFException {
-		try {
-			return context.getEngine().getOrders();
-		} catch (JFException e) {
-			throw new JFException("Cannot load orders from server.", e);
-		}
 	}
 
 	public IContext getContext() {
@@ -145,9 +174,12 @@ public class StateMachine implements IStrategy {
 
 	private State recignizeState() throws JFException {
 		// TODO: recognize states
+		State ret = null;
 		try {
 			if (context.getEngine().getOrders().size() == 0) {
-				return new SignalSeekerState();
+				ret = new SignalSeekerState();
+				logger.info("------------- " + ret.getName() + " state recognized!");
+				return ret;
 			} else {
 				logger.fatal("No alg. to determine state!");
 				return null;
@@ -159,8 +191,12 @@ public class StateMachine implements IStrategy {
 
 	@Override
 	public void onStart(IContext context) throws JFException {
+		if (!context.isFullAccessGranted()) {
+			logger.fatal("Full access need to run this strategy!");
+			throw new JFException("Full access need to run this strategy!");
+		}
 		this.context = context;
-		setStartBalance(context.getAccount().getBalance());
+		checkStartEnvironment();
 
 		try {
 			changeState(recignizeState());
@@ -168,12 +204,27 @@ public class StateMachine implements IStrategy {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
 
+	private void checkStartEnvironment() {
+		setStartBalance(context.getAccount().getBalance());
+		try {
+			positions.addAll(context.getEngine().getOrders());
+		} catch (JFException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		if (context.getEngine().getType().equals(IEngine.Type.TEST)) {
 			for (IChart c : charts) {
 				setChartDecoration(c);
 			}
 		}
+		logger.info("account id:		\t\t" + context.getAccount().getAccountId());
+		logger.info("account state:     \t\t" + context.getAccount().getAccountState());
+		logger.info("account balance:	\t\t" + context.getAccount().getBalance() + " "
+				+ context.getAccount().getCurrency().getCurrencyCode());
+		logger.info("current leverage:	\t\t1:" + context.getAccount().getLeverage());
+		logger.info("account is global:	\t\t" + context.getAccount().isGlobal());
 	}
 
 	private void setChartDecoration(IChart c) {
@@ -186,10 +237,14 @@ public class StateMachine implements IStrategy {
 		label.setColor(Color.BLACK);
 		c.add(label);
 
-		c.add(context.getIndicators().getIndicator("BBANDS"), new Object[] { 50, 2.0, 2.0, 0 });
-		c.add(context.getIndicators().getIndicator("BBANDS"), new Object[] { 50, 2.2, 2.2, 0 });
-		c.add(context.getIndicators().getIndicator("RSI"), new Object[] { 50 });
-		//c.add(context.getIndicators().getIndicator("MACD"), new Object[] { 12, 26, 9 });
+		// c.add(context.getIndicators().getIndicator("BBANDS"), new Object[] {
+		// 50, 2.0, 2.0, 0 });
+		// c.add(context.getIndicators().getIndicator("BBANDS"), new Object[] {
+		// 50, 2.2, 2.2, 0 });
+		// c.add(context.getIndicators().getIndicator("ADX"), new Object[] { 13
+		// });
+		// c.add(context.getIndicators().getIndicator("MACD"), new Object[] {
+		// 12, 26, 9 });
 
 	}
 
@@ -200,6 +255,18 @@ public class StateMachine implements IStrategy {
 																		// all
 																		// states!
 			children.put(childState, childState.getSignal(instrument, tick, StateMachine.state));
+		}
+
+		selectBestTransition(children);
+	}
+
+	@Override
+	public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
+		Map<State, Signal> children = new HashMap<State, Signal>();
+		for (State childState : StateMachine.state.getNextStates()) { // instantiate
+																		// all
+																		// states!
+			children.put(childState, childState.getSignal(instrument, period, askBar, bidBar, StateMachine.state));
 		}
 
 		selectBestTransition(children);
@@ -256,134 +323,147 @@ public class StateMachine implements IStrategy {
 	}
 
 	@Override
-	public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
-		// if (period.equals(Period.FIFTEEN_MINS)) {
-		// for (IChart c : StateMachine.getInstance().getCharts()) {
-		// IScreenLabelChartObject label =
-		// c.getChartObjectFactory().createScreenLabel("screenLabel");
-		// label.setCorner(Corner.TOP_LEFT);
-		// label.setxDistance(5);
-		// label.setyDistance(5);
-		// StringBuilder l = new StringBuilder().append("$ " +
-		// context.getAccount().getBalance());
-		// if (StateMachine.getInstance().getOrders().size() > 0) {
-		// for (IOrder o : StateMachine.getInstance().getOrders()) {
-		// l.append("    #" + o.getId() + "    " + o.getProfitLossInUSD() + "$/"
-		// + StateMachine.getInstance().getContext().getAccount().getBalance()
-		// * StateMachine.BRAVE_VALUE * 0.4 + "/"
-		// + StateMachine.getInstance().getContext().getAccount().getBalance()
-		// * StateMachine.BRAVE_VALUE * -0.2);
-		// }
-		// }
-		// label.setText(l.toString(), new Font(Font.MONOSPACED, Font.PLAIN,
-		// 12));
-		// label.setColor(Color.BLACK);
-		//
-		// if (c.getInstrument().equals(Instrument.EURUSD)) {
-		// c.add(label);
-		// }
-		// }
-		// }
-		Set<Signal> signals = new HashSet<Signal>();
-		for (State nextState : StateMachine.state.getNextStates()) { // instantiate
-																		// all
-																		// states!
-			signals.add(nextState.getSignal(instrument, period, askBar, bidBar, StateMachine.state));
+	public void onMessage(IMessage message) throws JFException {
+		if (message != null) {
+			logger.debug("Message: " + message.getContent());
+		}
+		if (message.getOrder() != null) {
+			if (message.getOrder().getId() != null && !positions.contains(message.getOrder())) {
+				logger.warn("Not managed order event happened! Order#" + message.getOrder().getId() + ": "
+						+ message.getContent());
+				return;
+			} else {
+				if (message.getOrder().getState() == IOrder.State.CLOSED) {
+					removePosition(message.getOrder());
+				}
+			}
+			switch (message.getType()) {
+			case ORDER_SUBMIT_OK:
+				orderMessage(message.getOrder(), " submitted: ");
+				break;
+			case ORDER_SUBMIT_REJECTED:
+				orderMessage(message.getOrder(), " rejected: ");
+				Integer attempts = resubmitAttempts.get(message.getOrder());
+				if (attempts > maxOrderResubmitCount) {
+					logger.error("Rejected order has exceeeded resubmit attempt count. Rollback!");
+					logger.error("Reason: " + message.getReasons());
+					try {
+						changeState(recignizeState());
+					} catch (RobotException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				} else {
+					resubmitAttempts.remove(message.getOrder());
+					IOrder newOrder = StateMachine
+							.getInstance()
+							.getContext()
+							.getEngine()
+							.submitOrder(message.getOrder().getLabel(), message.getOrder().getInstrument(),
+									message.getOrder().getOrderCommand(), message.getOrder().getAmount() + 0.001);
+					resubmitAttempts.put(newOrder, ++attempts);
+					logger.warn("Resubmitted order: " + newOrder + " attempts left: "
+							+ (maxOrderResubmitCount - attempts + 1));
+				}
+
+				break;
+			case ORDER_FILL_OK:
+				orderMessage(message.getOrder(), " filled:    ");
+				IOrder order = message.getOrder();
+				try {
+					changeState(getNextState());
+				} catch (RobotException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+			case ORDER_FILL_REJECTED:
+				orderMessage(message.getOrder(), " cancelled: ");
+				try {
+					logger.info("change back");
+					changeState(recignizeState());
+				} catch (RobotException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+			case CALENDAR:
+				break;
+			case CONNECTION_STATUS:
+				break;
+			case INSTRUMENT_STATUS:
+				break;
+			case MAIL:
+				break;
+			case NEWS:
+				break;
+			case NOTIFICATION:
+				break;
+			case ORDERS_MERGE_OK:
+				break;
+			case ORDERS_MERGE_REJECTED:
+				break;
+			case ORDER_CHANGED_OK:
+				break;
+			case ORDER_CHANGED_REJECTED:
+				break;
+			case ORDER_CLOSE_OK:
+				orderMessage(message.getOrder(), " closed:   ");
+				logger.info("New balance:............................................ $"
+						+ StateMachine.getInstance().getContext().getAccount().getBalance());
+				try {
+					changeState(getNextState());
+				} catch (RobotException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+			case ORDER_CLOSE_REJECTED:
+				orderMessage(message.getOrder(), " close err: ");
+				Integer attemptz = resubmitAttempts.get(message.getOrder());
+				if (attemptz > maxOrderResubmitCount) {
+					logger.error("Rejected order has exceeeded resubmit attempt count. Rollback!");
+					logger.error("Reason: " + message.getReasons());
+					try {
+						changeState(recignizeState());
+					} catch (RobotException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				} else {
+					resubmitAttempts.remove(message.getOrder());
+					IOrder newOrder = StateMachine
+							.getInstance()
+							.getContext()
+							.getEngine()
+							.submitOrder(message.getOrder().getLabel(), message.getOrder().getInstrument(),
+									message.getOrder().getOrderCommand(), message.getOrder().getAmount() + 0.001);
+					resubmitAttempts.put(newOrder, ++attemptz);
+					logger.warn("Resubmitted order: " + newOrder + " attempts left: "
+							+ (maxOrderResubmitCount - attemptz + 1));
+				}
+				break;
+			case SENDING_ORDER:
+				break;
+			case STOP_LOSS_LEVEL_CHANGED:
+				break;
+			case STRATEGY_BROADCAST:
+				break;
+			case WITHDRAWAL:
+				break;
+			default:
+				break;
+			}
+		} else {
+			logger.info("Message without order!" + message.getContent());
 		}
 	}
 
-	@Override
-	public void onMessage(IMessage message) throws JFException {
-		switch (message.getType()) {
-		case ORDER_SUBMIT_OK:
-			logger.info("Order #" + message.getOrder().getId() + " submitted: " + message.getOrder());
-			try {
-				// for (IOrder order : database.keySet()) {
-				// logger.info("oder #" + order.getId() + " state: " +
-				// order.getState());
-				// }
-				changeState(getNextState());
-			} catch (RobotException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			break;
-		case ORDER_SUBMIT_REJECTED:
-			logger.info("Order #" + message.getOrder().getId() + " submitted: " + message.getOrder());
-			try {
-				logger.info("change back");
-				changeState(recignizeState());
-			} catch (RobotException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			break;
-		case ORDER_FILL_OK:
-			logger.info("Order filled: " + message.getOrder());
-			break;
-		case ORDER_FILL_REJECTED:
-			logger.info("Order cancelled: " + message.getOrder());
-			try {
-				logger.info("change back");
-				changeState(recignizeState());
-			} catch (RobotException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			break;
-		case CALENDAR:
-			break;
-		case CONNECTION_STATUS:
-			break;
-		case INSTRUMENT_STATUS:
-			break;
-		case MAIL:
-			break;
-		case NEWS:
-			break;
-		case NOTIFICATION:
-			break;
-		case ORDERS_MERGE_OK:
-			break;
-		case ORDERS_MERGE_REJECTED:
-			break;
-		case ORDER_CHANGED_OK:
-			break;
-		case ORDER_CHANGED_REJECTED:
-			break;
-		case ORDER_CLOSE_OK:
-			logger.info("Order closed: " + message.getOrder());
-			try {
-				// for (IOrder order : database.keySet()) {
-				// logger.info("oder #" + order.getId() + " state: " +
-				// order.getState());
-				// }
-				changeState(getNextState());
-			} catch (RobotException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			break;
-		case ORDER_CLOSE_REJECTED:
-			logger.info("Order close failed: " + message.getOrder());
-			try {
-				logger.info("change back");
-				changeState(recignizeState());
-			} catch (RobotException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			break;
-		case SENDING_ORDER:
-			break;
-		case STOP_LOSS_LEVEL_CHANGED:
-			break;
-		case STRATEGY_BROADCAST:
-			break;
-		case WITHDRAWAL:
-			break;
-		default:
-			break;
+	private void orderMessage(IOrder order, String string) {
+		if (order.getId() != null) {
+			logger.info("Order #" + order.getId() + " @ " + order.getInstrument() + string + order);
+		} else {
+			logger.info("Order ctime-" + order.getCreationTime() + " @ " + order.getInstrument() + string + order);
 		}
 	}
 
@@ -396,7 +476,7 @@ public class StateMachine implements IStrategy {
 	@Override
 	public void onStop() throws JFException {
 		if (context.getEngine().getOrders().size() != 0) {
-			for (IOrder o : StateMachine.getInstance().getOrders()) {
+			for (IOrder o : StateMachine.getInstance().getContext().getEngine().getOrders()) {
 				logger.info("profit for #" + o.getId() + " is $" + o.getProfitLossInUSD());
 			}
 			logger.error("Closing all remaining orders!");

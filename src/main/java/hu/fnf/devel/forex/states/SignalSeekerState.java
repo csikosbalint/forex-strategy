@@ -68,20 +68,18 @@ public class SignalSeekerState extends State {
 	@Override
 	public Signal getSignal(Instrument instrument, ITick tick, State actual) throws JFException {
 		if (actual.getInstruments().contains(instrument)) {
-			if (actual instanceof ScalpHolder7State || actual instanceof MACDSample452State) {
-				if (StateMachine.getInstance().getOrders().size() > 0) {
-					/*
-					 * close strategy for ScalpHolder7State, MACDSample452State
-					 */
-					Signal challenge = new Signal(instrument,
-							StateMachine.getInstance().getOrders().get(0).getAmount(), StateMachine.CLOSE);
-					challenge.setPeriod(StateMachine.getInstance().getPeriod(StateMachine.getInstance().getOrders().get(0)));
-					
-					double max = actual.getClose().getMax();
-					double act = actual.getClose().calcProbability(challenge, tick, actual);
-					challenge.setValue(act / max);
-					return challenge;
-				}
+			if (StateMachine.getInstance().getContext().getEngine().getOrders().size() > 0
+					&& StateMachine.getInstance().getContext().getEngine().getOrders().get(0).getInstrument()
+							.equals(instrument)) {
+				Signal challenge = new Signal(instrument, StateMachine.getInstance().getContext().getEngine()
+						.getOrders().get(0).getAmount(), StateMachine.CLOSE);
+				challenge.setPeriod(StateMachine.getInstance().getPeriod(
+						StateMachine.getInstance().getContext().getEngine().getOrders().get(0)));
+
+				double max = actual.getClose().getMax();
+				double act = actual.getClose().calcProbability(challenge, tick, actual);
+				challenge.setValue(act / max);
+				return challenge;
 			}
 		}
 		return null;
@@ -96,8 +94,9 @@ public class SignalSeekerState extends State {
 	@Override
 	public Set<State> getNextStates() {
 		Set<State> nextstates = new HashSet<State>();
-		nextstates.add(new ScalpHolder7State());
-		nextstates.add(new MACDSample452State());
+		// nextstates.add(new ScalpHolder7State());
+		// nextstates.add(new MACDSample452State());
+		nextstates.add(new ThreeLittlePigsState());
 		return nextstates;
 	}
 

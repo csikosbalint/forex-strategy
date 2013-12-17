@@ -6,6 +6,7 @@ import hu.fnf.devel.forex.criteria.MACDClose;
 import hu.fnf.devel.forex.criteria.MACDOpen;
 import hu.fnf.devel.forex.criteria.MarketCriterion;
 import hu.fnf.devel.forex.criteria.MoneyManagement;
+import hu.fnf.devel.forex.criteria.TrendADXCriterion;
 import hu.fnf.devel.forex.utils.CloseCriterion;
 import hu.fnf.devel.forex.utils.OpenCriterion;
 import hu.fnf.devel.forex.utils.Signal;
@@ -21,6 +22,9 @@ import com.dukascopy.api.JFException;
 import com.dukascopy.api.Period;
 
 public class MACDSample452State extends State {
+	/*
+	 * 
+	 */
 	private final double amount = 0.01;
 
 	// private int MATrendPeriod = 26;
@@ -39,7 +43,8 @@ public class MACDSample452State extends State {
 		open = new MarketCriterion(open);
 		int days = 3;
 		int trades = 2;
-		//open = new BadLuckPanic(open, days, trades);
+		open = new BadLuckPanic(open, days, trades);
+		open = new TrendADXCriterion(open, StateMachine.TREND);
 		open = new MACDOpen(open);
 
 		close = new CloseCriterion();
@@ -49,24 +54,23 @@ public class MACDSample452State extends State {
 	}
 
 	public Signal getSignal(Instrument instrument, ITick tick, State actual) throws JFException {
-		if (instruments.contains(instrument)) {
-			/*
-			 * close strategy
-			 */
-			close.reset();
-			Signal challenge = new Signal(instrument, getAmount(), StateMachine.CLOSE);
-			double max = close.getMax();
-			double act = close.calcProbability(challenge, tick, actual);
-			challenge.setValue(act / max);
-			return challenge;
-		}
+//		if (instruments.contains(instrument) ) {
+//			/*
+//			 * close strategy
+//			 */
+//			close.reset();
+//			Signal challenge = new Signal(instrument, getAmount(), StateMachine.CLOSE);
+//			double max = close.getMax();
+//			double act = close.calcProbability(challenge, tick, actual);
+//			challenge.setValue(act / max);
+//			return challenge;
+//		}
 		return null;
 	}
 
 	public Signal getSignal(Instrument instrument, Period period, IBar askBar, IBar bidBar, State actual)
 			throws JFException {
 		if (instruments.contains(instrument) && periods.contains(period)) {
-			
 			/*
 			 * open strategy
 			 */
@@ -75,7 +79,7 @@ public class MACDSample452State extends State {
 			challenge.setPeriod(period);
 			double max = open.getMax();
 			double act = open.calcProbability(challenge, period, askBar, bidBar, actual);
-			challenge.setValue(act / max);
+			challenge.setValue(act/max);
 			return challenge;
 		}
 		return null;
