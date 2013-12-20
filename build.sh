@@ -4,7 +4,7 @@ if [ "$ANS" != "" ]
 then
     read -p "Change log: " CHANGE
     git commit -a -m "$CHANGE"
-    TIME="$(date +%Y%m%d)GIT$(git show HEAD --abbrev-commit| head -1 | cut -d' '-f2)"
+    TIME="$(date +%Y%m%d)GIT$(git show HEAD --abbrev-commit| head -1 | cut -d" " -f2)"
 else
     TIME="$(date +%Y%m%d%H%M%S)"
 fi
