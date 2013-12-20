@@ -9,8 +9,6 @@ else
     TIME="$(date +%Y%m%d%H%M%S)"
 fi
 
-if
-
 MAIN="src/main/java/hu/fnf/devel/forex/Main.java"
 SERVER="jenna.fnf.hu"
 RDIR="builds"
