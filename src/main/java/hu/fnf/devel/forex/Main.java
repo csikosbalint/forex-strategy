@@ -55,7 +55,8 @@ public class Main {
 	/**
 	 * login variables
 	 */
-	//public final static String jnlpUrl = "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
+	// public final static String jnlpUrl =
+	// "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
 	public final static String jnlpUrl = "https://eu-demo.dukascopy.com/fo/platform/jForex";
 	public final static String userName = "DEMO10037EfVQZEU";
 	public final static String password = "EfVQZ";
@@ -107,7 +108,11 @@ public class Main {
 			logger.info("Using basic configuration for logging.");
 		}
 		logger.info("-------------- Forex robot written by johnnym  --------------");
-
+		logger.info("-------------- Version: 1.0@" + "DATE" + "     --------------"); // DATE
+																						// is
+																						// replaced
+																						// by
+																						// build.sh
 		setPhase("Initalization");
 		info = new WebInfo();
 		if (args.length > 1 && args[1].equalsIgnoreCase("test")) {
@@ -122,7 +127,7 @@ public class Main {
 					}
 
 					public void onStart(long arg0) {
-						
+
 					}
 
 					public void onDisconnect() {
@@ -218,8 +223,8 @@ public class Main {
 
 	public static void test() {
 		String[] args = new String[2];
-		//args[0] = "/home/johnnym/git/forex-strategy/res/log4j.properties";
-		//args[1] = "test";
+		// args[0] = "/home/johnnym/git/forex-strategy/res/log4j.properties";
+		// args[1] = "test";
 
 		TesterMainGUI gui = new TesterMainGUI();
 		try {
@@ -266,12 +271,16 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 				// show ticks for EURUSD and 10 min bars for other instruments
 				IFeedDescriptor feedDescriptor = new FeedDescriptor();
 
-//				if ((new ScalpHolder7State()).getInstruments().contains(chart.getInstrument()) && 
-//						!(new MACDSample452State()).getInstruments().contains(chart.getInstrument())) {
-//						feedDescriptor.setPeriod(Period.ONE_MIN);
-//				} else {
-//					feedDescriptor.setPeriod(Period.ONE_HOUR);
-//				}
+				// if ((new
+				// ScalpHolder7State()).getInstruments().contains(chart.getInstrument())
+				// &&
+				// !(new
+				// MACDSample452State()).getInstruments().contains(chart.getInstrument()))
+				// {
+				// feedDescriptor.setPeriod(Period.ONE_MIN);
+				// } else {
+				// feedDescriptor.setPeriod(Period.ONE_HOUR);
+				// }
 				feedDescriptor.setPeriod(Period.FOUR_HOURS);
 				feedDescriptor.setDataType(DataType.TIME_PERIOD_AGGREGATION);
 				feedDescriptor.setInstrument(chart.getInstrument());
@@ -477,7 +486,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 			public void actionPerformed(ActionEvent e) {
 				if (executionControl != null) {
 					executionControl.continueExecution();
-//					updateButtons();
+					// updateButtons();
 				}
 			}
 		});
@@ -488,7 +497,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 			public void actionPerformed(ActionEvent e) {
 				if (executionControl != null) {
 					executionControl.cancelExecution();
-//					updateButtons();
+					// updateButtons();
 				}
 			}
 		});
@@ -528,7 +537,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 	}
 
 	public void main(String[] args) throws Exception {
-//		startStrategy();
+		// startStrategy();
 		TesterMainGUI testerMainGUI = new TesterMainGUI();
 		testerMainGUI.showChartFrame();
 	}
