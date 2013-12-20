@@ -18,6 +18,7 @@ public abstract class OpenCriterionDecorator extends CriterionDecorator {
 	 */
 	@Override
 	public double calcProbability(Signal challenge, ITick tick, State actual) {
+		logger.info("Searching for position...(" + challenge.getInstrument().name() + ")");
 		double ret = this.criterion.calcProbability(challenge, tick, actual);
 		if (isExcluded()) {
 			return 0;
@@ -27,9 +28,7 @@ public abstract class OpenCriterionDecorator extends CriterionDecorator {
 
 	@Override
 	public double calcProbability(Signal challenge, Period period, IBar askBar, IBar bidBar, State actual) {
-		if (period.equals(Period.ONE_HOUR)) {
-			logger.info("Searching for position...(" + period.name() + "/" + challenge.getInstrument().name() + ")");
-		}
+		logger.info("Searching for position...(" + period.name() + "/" + challenge.getInstrument().name() + ")");
 		double ret = this.criterion.calcProbability(challenge, period, askBar, bidBar, actual);
 		if (isExcluded()) {
 			return 0;
