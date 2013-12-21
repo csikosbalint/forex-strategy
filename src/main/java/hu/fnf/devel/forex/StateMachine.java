@@ -1,5 +1,7 @@
 package hu.fnf.devel.forex;
 
+import hu.fnf.devel.forex.database.Order;
+import hu.fnf.devel.forex.database.Strategy;
 import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.utils.RobotException;
 import hu.fnf.devel.forex.utils.Signal;
@@ -11,6 +13,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
 
 import org.apache.log4j.Logger;
 
@@ -48,6 +55,13 @@ public class StateMachine implements IStrategy {
 	 * id,period,strategy,status,resubmit
 	 */
 	private Map<IOrder, Period> database;
+	/*
+	 * jpa database
+	 */
+	EntityManagerFactory entityManagerFactory =  Persistence.createEntityManagerFactory("forex-strategy");
+    EntityManager em = entityManagerFactory.createEntityManager();
+    EntityTransaction userTransaction = em.getTransaction();
+    
 	private ArrayList<IOrder> positions;
 	private double startBalance;
 
@@ -190,6 +204,12 @@ public class StateMachine implements IStrategy {
 
 	@Override
 	public void onStart(IContext context) throws JFException {
+		Strategy strategy = new Strategy();
+		strategy.setName("test");
+		userTransaction.begin();
+		em.persist(strategy);
+		userTransaction.commit();
+		
 		if (!context.isFullAccessGranted()) {
 			logger.fatal("Full access need to run this strategy!");
 			throw new JFException("Full access need to run this strategy!");

@@ -19,6 +19,19 @@ do
     esac
 done
 
+if [ "$RUN" == "" ]
+then
+    read -p "Run after compile? [yes/NO]: " RUN
+fi
+if [ "$CPY" == "" ]
+then
+    read -p "Copy to server?    [yes/NO]: " CPY
+fi
+if [ "$CMT" == "" ]
+then
+    read -p "Commit to git?     [yes/NO]: " CMT
+fi
+
 RUN=${RUN:-no}
 CPY=${CPY:-no}
 CMT=${CMT:-no}
@@ -42,6 +55,10 @@ sed -i "s/$TIME/DATE/g" $MAIN
 if [ "$CPY" != "no" ]
 then
     scp target/Main.jar $SERVER:./$RDIR/$TIME.jar
+    if [ "$RUN" != "no" ]
+    then
+        ssh $SERVER 'java -jar $(ls -t builds/*.jar | head -1) log4j.properties &'
+    fi
 fi
 if [ "$RUN" != "no" ]
 then

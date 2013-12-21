@@ -1,8 +1,5 @@
 package hu.fnf.devel.forex;
 
-
-import hu.fnf.devel.forex.states.MACDSample452State;
-import hu.fnf.devel.forex.states.ScalpHolder7State;
 import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.utils.Info;
 import hu.fnf.devel.forex.utils.State;
