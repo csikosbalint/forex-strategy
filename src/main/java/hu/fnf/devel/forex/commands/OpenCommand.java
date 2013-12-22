@@ -41,6 +41,6 @@ public class OpenCommand implements Command {
 //		logger.info("oder state: " + order.getState());
 //			throw new JFException(JFException.Error.ORDER_INCORRECT);
 //		}
-		StateMachine.getInstance().pushDatabase(order, signal.getPeriod());
+		StateMachine.getInstance().pushPosition(order, signal.getPeriod());
 	}
 }

@@ -8,7 +8,7 @@
 		<properties>
 			<property name="javax.persistence.jdbc.url" value="jdbc:mysql://tech.fnf.hu:3306/FX_DATABASE"/>
 			<property name="javax.persistence.jdbc.user" value="fxrobot"/>
-			<property name="javax.persistence.jdbc.password" value="XXXX"/>
+			<property name="javax.persistence.jdbc.password" value="Cica123"/>
 			<property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/>
 		</properties>
 	</persistence-unit>

@@ -1,5 +1,6 @@
 package hu.fnf.devel.forex;
 
+import hu.fnf.devel.forex.database.Orders;
 import hu.fnf.devel.forex.database.Order;
 import hu.fnf.devel.forex.database.Strategy;
 import hu.fnf.devel.forex.states.SignalSeekerState;
@@ -51,29 +52,14 @@ public class StateMachine implements IStrategy {
 	private static State nextState;
 	private static boolean stateLock = false;
 	private IContext context;
-	/*
-	 * id,period,strategy,status,resubmit
-	 */
-	private Map<IOrder, Period> database;
-	/*
-	 * jpa database
-	 */
-	EntityManagerFactory entityManagerFactory =  Persistence.createEntityManagerFactory("forex-strategy");
-    EntityManager em = entityManagerFactory.createEntityManager();
-    EntityTransaction userTransaction = em.getTransaction();
-    
-	private ArrayList<IOrder> positions;
+	
+	private Orders orders = new Orders();;
+	
 	private double startBalance;
 
 	private Collection<IChart> charts = new ArrayList<IChart>();
 	private Map<IOrder, Integer> resubmitAttempts = new HashMap<IOrder, Integer>();
-
-	private StateMachine() {
-		database = new HashMap<IOrder, Period>();
-		positions = new ArrayList<IOrder>();
-	}
-
-	/*
+ 	/*
 	 * THREAD SAFE!!!
 	 */
 	public synchronized static StateMachine getInstance() {
@@ -106,15 +92,6 @@ public class StateMachine implements IStrategy {
 				setState(newState);
 				logger.info("------------- initalize state -> " + StateMachine.state.getName() + " -------------");
 			} else {
-			/*
-			 * rollback or non-real state change
-			 */
-			// try {
-			// setNextState(null);
-			// } catch (JFException e) {
-			// // TODO Auto-generated catch block
-			// e.printStackTrace();
-			// }
 				setStateLock(false);
 			}
 		}
@@ -162,25 +139,26 @@ public class StateMachine implements IStrategy {
 		StateMachine.stateLock = stateLock;
 	}
 
-	public void pushDatabase(IOrder order, Period period) {
-		logger.debug("Order #" + order.getId() + " recorded to database.");
-		database.put(order, period);
+	public void pushPosition(IOrder order, Period period) {
+		orders.pushOrder(order, period);
 		resubmitAttempts.put(order, 1);
-		pushPosition(order);
+//		pushPosition(order);
 	}
 
 	public void removePosition(IOrder order) {
-		logger.debug("Order #" + order.getId() + " removed from memory.");
-		positions.remove(order);
+		Order o = orders.popOrder(order);
+		logger.debug("Order #" + o.getId() + " removed from memory.");
 	}
 
-	public void pushPosition(IOrder order) {
-		logger.debug("Order #" + order.getId() + " pushed into memory.");
-		positions.add(order);
-	}
+//	public void pushPosition(IOrder order) {
+//		logger.debug("Order #" + order.getId() + " pushed into memory.");
+//		positions.add(order);
+//	}
 
 	public Period getPeriod(IOrder order) {
-		return database.get(order);
+//		if ( orders.getOrders().size() != 0 ) {
+//		return orders.getOrders().get(0).getP
+		return Period.DAILY;
 	}
 
 	public IContext getContext() {
@@ -204,11 +182,6 @@ public class StateMachine implements IStrategy {
 
 	@Override
 	public void onStart(IContext context) throws JFException {
-		Strategy strategy = new Strategy();
-		strategy.setName("test");
-		userTransaction.begin();
-		em.persist(strategy);
-		userTransaction.commit();
 		
 		if (!context.isFullAccessGranted()) {
 			logger.fatal("Full access need to run this strategy!");
@@ -227,12 +200,12 @@ public class StateMachine implements IStrategy {
 
 	private void checkStartEnvironment() {
 		setStartBalance(context.getAccount().getBalance());
-		try {
-			positions.addAll(context.getEngine().getOrders());
-		} catch (JFException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		try {
+//			positions.addAll(context.getEngine().getOrders());
+//		} catch (JFException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		if (context.getEngine().getType().equals(IEngine.Type.TEST)) {
 			for (IChart c : charts) {
 				setChartDecoration(c);
@@ -359,15 +332,15 @@ public class StateMachine implements IStrategy {
 		/*
 		 * order message
 		 */
-		if (message.getOrder().getId() != null && !positions.contains(message.getOrder())) {
-			logger.warn("Not managed order event happened! Order#" + message.getOrder().getId() + ": "
-					+ message.getContent());
-			return;
-		} else {
+//		if (message.getOrder().getId() != null && !positions.contains(message.getOrder())) {
+//			logger.warn("Not managed order event happened! Order#" + message.getOrder().getId() + ": "
+//					+ message.getContent());
+//			return;
+//		} else {
 			if (message.getOrder().getState() == IOrder.State.CLOSED) {
 				removePosition(message.getOrder());
 			}
-		}
+//		}
 		switch (message.getType()) {
 		case ORDER_SUBMIT_OK:
 			orderMessage(message.getOrder(), " submitted: ");

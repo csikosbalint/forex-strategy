@@ -55,14 +55,16 @@ public class Main {
 	 */
 	// public final static String jnlpUrl =
 	// "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
-	public final static String jnlpUrl = "https://eu-demo.dukascopy.com/fo/platform/jForex";
+	public final static String jnlpUrl	= "https://eu-demo.dukascopy.com/fo/platform/jForex";
 	public final static String userName = "DEMO10037EfVQZEU";
 	public final static String password = "EfVQZ";
+	public final static String MASTER 	= "johnnym@fnf.hu";
 
 	/**
 	 * global variables
 	 */
 	private static final Logger logger = Logger.getLogger(Main.class);
+	
 	private static IClient client;
 	private static Info info;
 	/**
@@ -217,6 +219,11 @@ public class Main {
 		}
 		lastILog = msg;
 		logger.info(msg);
+	}
+	
+	public static void sendMail(String subject, String body, String to) {
+		logger.info("Mail \"" + subject +"\" has been sent to " + to);
+		return;
 	}
 
 	public static void test() {

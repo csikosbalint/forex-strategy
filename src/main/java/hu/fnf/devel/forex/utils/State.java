@@ -102,4 +102,8 @@ public abstract class State {
 	public Criterion getOpen() {
 		return open;
 	}
+	
+	public static boolean Condition1(State s) {
+		return false;
+	}
 }
