@@ -52,7 +52,7 @@ public class StateMachine implements IStrategy {
 	private static State nextState;
 	private static boolean stateLock = false;
 	
-	private final Orders ordersMemory = new Orders();;
+	private final Orders orders = new Orders();
 	private IContext context;
 	
 	
@@ -149,12 +149,12 @@ public class StateMachine implements IStrategy {
 	}
 
 	public void pushPosition(IOrder order, Period period) {
-		ordersMemory.pushOrder(order, period);
+		orders.add(order, period);
 		resubmitAttempts.put(order, 1);
 	}
 
 	public Period getPeriod(IOrder order) {
-		return Period.valueOf(ordersMemory.getOrderByCreation(order.getCreationTime()).getPeriod());
+		return Period.valueOf(orders.get(order.getCreationTime()).getPeriod());
 	}
 
 	public IContext getContext() {
@@ -331,7 +331,7 @@ public class StateMachine implements IStrategy {
 		IOrder iorder = message.getOrder();
 		
 		Orders.userTransaction.begin();
-		Order morder = Orders.getOrderByCreation(iorder.getCreationTime());
+		Order morder = orders.get(iorder.getCreationTime());
 		morder.setLaststate(iorder.getState().name());
 		Orders.userTransaction.commit();
 		/*
@@ -346,7 +346,7 @@ public class StateMachine implements IStrategy {
 				/*
 				 * closing procedure
 				 */
-				Order o = ordersMemory.popOrder(message.getOrder());
+				Order o = orders.get(message.getOrder().getCreationTime());
 				logger.info("Order #" + o.getOrderid() + " removed from memory.");
 			}
 //		}

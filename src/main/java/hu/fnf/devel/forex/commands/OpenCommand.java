@@ -25,7 +25,7 @@ public class OpenCommand implements Command {
 	@Override
 	public void execute() throws JFException {
 		IOrder order = StateMachine.getInstance().getContext().getEngine()
-				.submitOrder(label, signal.getInstrument(), signal.getType(), signal.getAmount());
+				.submitOrder(StateMachine.getInstance().getNextState().getName(), signal.getInstrument(), signal.getType(), signal.getAmount());
 		logger.info("Order " + order.getInstrument().name() + "/" + order.getOrderCommand().name()
 				+ " has been submitted with amount " + order.getAmount());
 		StateMachine.getInstance().pushPosition(order, signal.getPeriod());
