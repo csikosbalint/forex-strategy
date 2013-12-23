@@ -51,14 +51,16 @@ public class StateMachine implements IStrategy {
 	private static State state;
 	private static State nextState;
 	private static boolean stateLock = false;
+	
+	private final Orders ordersMemory = new Orders();;
 	private IContext context;
 	
-	private Orders orders = new Orders();;
 	
 	private double startBalance;
 
 	private Collection<IChart> charts = new ArrayList<IChart>();
 	private Map<IOrder, Integer> resubmitAttempts = new HashMap<IOrder, Integer>();
+	
  	/*
 	 * THREAD SAFE!!!
 	 */
@@ -101,6 +103,10 @@ public class StateMachine implements IStrategy {
 	 * --------- END ---------
 	 */
 
+	/*
+	 * static
+	 */
+
 	public static void setNextState(State nextState) throws JFException {
 		if (!isStateLock()) {
 			setStateLock(true);
@@ -109,7 +115,10 @@ public class StateMachine implements IStrategy {
 			throw new JFException("state is locked.");
 		}
 	}
-
+	
+	/*
+	 * public
+	 */
 	public void setStartBalance(double startBalance) {
 		this.startBalance = startBalance;
 	}
@@ -140,25 +149,12 @@ public class StateMachine implements IStrategy {
 	}
 
 	public void pushPosition(IOrder order, Period period) {
-		orders.pushOrder(order, period);
+		ordersMemory.pushOrder(order, period);
 		resubmitAttempts.put(order, 1);
-//		pushPosition(order);
 	}
-
-	public void removePosition(IOrder order) {
-		Order o = orders.popOrder(order);
-		logger.debug("Order #" + o.getId() + " removed from memory.");
-	}
-
-//	public void pushPosition(IOrder order) {
-//		logger.debug("Order #" + order.getId() + " pushed into memory.");
-//		positions.add(order);
-//	}
 
 	public Period getPeriod(IOrder order) {
-//		if ( orders.getOrders().size() != 0 ) {
-//		return orders.getOrders().get(0).getP
-		return Period.DAILY;
+		return Period.valueOf(ordersMemory.getOrderByCreation(order.getCreationTime()).getPeriod());
 	}
 
 	public IContext getContext() {
@@ -317,6 +313,9 @@ public class StateMachine implements IStrategy {
 
 	@Override
 	public void onMessage(IMessage message) throws JFException {
+		/*
+		 * http://www.dukascopy.com/wiki/files/Market%20Order%20States%20Diagram%2030.05.2012.pdf
+		 */
 		if (message.getOrder() == null) {
 			/*
 			 * not order message
@@ -329,6 +328,12 @@ public class StateMachine implements IStrategy {
 			}
 			return;
 		}
+		IOrder iorder = message.getOrder();
+		
+		Orders.userTransaction.begin();
+		Order morder = Orders.getOrderByCreation(iorder.getCreationTime());
+		morder.setLaststate(iorder.getState().name());
+		Orders.userTransaction.commit();
 		/*
 		 * order message
 		 */
@@ -338,7 +343,11 @@ public class StateMachine implements IStrategy {
 //			return;
 //		} else {
 			if (message.getOrder().getState() == IOrder.State.CLOSED) {
-				removePosition(message.getOrder());
+				/*
+				 * closing procedure
+				 */
+				Order o = ordersMemory.popOrder(message.getOrder());
+				logger.info("Order #" + o.getOrderid() + " removed from memory.");
 			}
 //		}
 		switch (message.getType()) {

@@ -28,6 +28,8 @@ public class OpenCommand implements Command {
 				.submitOrder(label, signal.getInstrument(), signal.getType(), signal.getAmount());
 		logger.info("Order " + order.getInstrument().name() + "/" + order.getOrderCommand().name()
 				+ " has been submitted with amount " + order.getAmount());
+		StateMachine.getInstance().pushPosition(order, signal.getPeriod());
+		
 		// TODO: bug, if I ask for .getState() I often get NullPointerEx printed but no real Ex
 		// Workaround is to wait a sec
 //		try {
@@ -41,6 +43,6 @@ public class OpenCommand implements Command {
 //		logger.info("oder state: " + order.getState());
 //			throw new JFException(JFException.Error.ORDER_INCORRECT);
 //		}
-		StateMachine.getInstance().pushPosition(order, signal.getPeriod());
+
 	}
 }
