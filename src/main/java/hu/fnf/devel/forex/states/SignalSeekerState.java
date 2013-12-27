@@ -94,6 +94,7 @@ public class SignalSeekerState extends State {
 	@Override
 	public Set<State> getNextStates() {
 		Set<State> nextstates = new HashSet<State>();
+		
 		nextstates.add(new ScalpHolder7State());
 		nextstates.add(new MACDSample452State());
 		//nextstates.add(new ThreeLittlePigsState());

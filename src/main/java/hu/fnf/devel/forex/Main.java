@@ -56,10 +56,10 @@ public class Main {
 	 */
 	// public final static String jnlpUrl =
 	// "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
-	//public final static String jnlpUrl	= "https://eu-demo.dukascopy.com/fo/platform/jForex";
-	public final static String jnlpUrl	= "http://localhost/jForex.jnlp";
-	public final static String userName = "DEMO10037EfVQZEU";
-	public final static String password = "EfVQZ";
+	public final static String jnlpUrl	= "https://eu-demo.dukascopy.com/fo/platform/jForex";
+	//public final static String jnlpUrl	= "http://localhost/jForex.jnlp";
+	public final static String userName = "DEMO10037kPsFrEU";
+	public final static String password = "kPsFr";
 	public final static String MASTER 	= "johnnym@fnf.hu";
 
 	/**
@@ -67,7 +67,7 @@ public class Main {
 	 */
 	private static final Logger logger = Logger.getLogger(Main.class);
 	
-	private static IClient client;
+	private static IClient client;	
 	private static Info info;
 	/**
 	 * logging variables
@@ -122,6 +122,7 @@ public class Main {
 
 					public void onStop(long arg0) {
 						setPhase(null);
+						System.exit(0);
 					}
 
 					public void onStart(long arg0) {
@@ -242,7 +243,7 @@ public class Main {
 		logger.debug("\tid:            " + iOrder.getId());
 		logger.debug("\tctime:         " + iOrder.getCreationTime());
 		logger.debug("\tcurrency:      " + iOrder.getInstrument());
-		logger.debug("\tcomment:       " + iOrder.getComment());
+		logger.debug("\tlabel:       " + iOrder.getLabel());
 		logger.debug("\tprofit/loss:   " + iOrder.getProfitLossInUSD());
 	}
 

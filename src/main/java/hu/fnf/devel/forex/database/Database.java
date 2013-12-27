@@ -14,11 +14,11 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 import javax.persistence.Query;
-import javax.persistence.TypedQuery;
 
 import org.apache.log4j.Logger;
 
 import com.dukascopy.api.IOrder;
+import com.dukascopy.api.IOrder.State;
 import com.dukascopy.api.Period;
 
 public class Database {
@@ -67,7 +67,7 @@ public class Database {
 		if (orders.contains(order)) {
 			orders.remove(order);
 		}
-		if (order.getStrategy().getName().equalsIgnoreCase("TestState")) {
+		if (order.getStrategyname().equalsIgnoreCase("TestState")) {
 			try {
 				userTransaction.begin();
 				em.remove(order);
@@ -80,6 +80,20 @@ public class Database {
 			}
 		}
 	}
+	public static void remove(IOrder iOrder) throws RobotException {
+		/*
+		 * update in database
+		 */
+		Order order = get(iOrder.getCreationTime());
+		if (orders.contains(order)) {
+			orders.remove(order);
+		}
+		order.setProfit(iOrder.getProfitLossInUSD());
+		order.setLaststate(iOrder.getState().name());
+		order.setClose(iOrder.getCloseTime());
+		merge(order);
+	}
+	
 
 	public static synchronized void merge(Order order) throws RobotException {
 		if (orders.contains(order)) {
@@ -121,17 +135,14 @@ public class Database {
 		}
 	}
 
-	public static void add(IOrder iorder, Period period) throws RobotException {
+	public static void add(IOrder iorder) throws RobotException {
 
 		Order order = new Order();
-		Strategy s = new Strategy();
 
-		s.setName(iorder.getComment());
 		order.setId(iorder.getCreationTime());
-		order.setPeriod(period.name());
+		order.setPeriod(iorder.getLabel().split("AND")[1]);
 		order.setLaststate(iorder.getState().name());
-
-		order.setStrategy(s);
+		order.setStrategyname(iorder.getLabel().split("AND")[0]);
 		add(order);
 	}
 }

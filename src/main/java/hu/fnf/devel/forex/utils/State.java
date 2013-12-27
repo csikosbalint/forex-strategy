@@ -112,8 +112,11 @@ public abstract class State {
 	}
 
 	public static State valueOf(String comment) {
+		logger.info("searching for state \"" + comment + "\"");
 		State ret = null;
-		if (comment.contains("SignalSeekerState")) {
+		if (comment == null ) {
+			return null;
+		} else if (comment.contains("SignalSeekerState")) {
 			ret = new SignalSeekerState();
 		} else if (comment.contains("MACDSample452State")) {
 			ret = new MACDSample452State();

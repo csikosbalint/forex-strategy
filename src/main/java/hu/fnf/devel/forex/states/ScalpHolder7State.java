@@ -23,14 +23,15 @@ public class ScalpHolder7State extends State {
 	private final double amount = 0.01;
 
 	public ScalpHolder7State() {
-		super("ScalpHolderState");
+		super("ScalpHolder7State");
 		/*
 		 * config
 		 */
 		this.instruments.add(Instrument.GBPJPY);
 		this.instruments.add(Instrument.USDJPY);
 		this.instruments.add(Instrument.EURJPY);
-
+		this.instruments.add(Instrument.EURUSD);
+		
 		this.periods	.add(Period.ONE_MIN);
 
 		open = new OpenCriterion();
@@ -47,6 +48,7 @@ public class ScalpHolder7State extends State {
 	
 	public Signal getSignal(Instrument instrument, ITick tick, State actual) throws JFException {
 		if (instruments.contains(instrument)) {
+			logger.info("tick on " + instrument.name());
 			/*
 			 * open strategy
 			 */

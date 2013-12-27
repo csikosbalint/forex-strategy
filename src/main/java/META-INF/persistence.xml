@@ -6,8 +6,8 @@
 		<provider>org.hibernate.ejb.HibernatePersistence</provider>
 		<mapping-file>hu/fnf/devel/forex/database/orm.xml</mapping-file>
 		<class>hu.fnf.devel.forex.database.Order</class>
-		<class>hu.fnf.devel.forex.database.Strategy</class>
 		<properties>
+			<property name="hibernate.connection.autocommit" value="false" /> 
 			<property name="javax.persistence.jdbc.url" value="jdbc:mysql://sql01x:3306/FX_DATABASE" />
 			<property name="javax.persistence.jdbc.user" value="fxrobot" />
 			<property name="javax.persistence.jdbc.password" value="Cica123" />

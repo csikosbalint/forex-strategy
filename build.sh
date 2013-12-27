@@ -46,6 +46,8 @@ else
     VERSION="$(date +%Y%m%d)GIT$(git show HEAD --abbrev-commit| head -1 | cut -d" " -f2)"
     DATEANDTIME="$(date +%Y%m%d%H%M%S)"
 fi
+echo $VERSION
+echo $DATEANDTIME
 
 SERVER="jenna.fnf.hu"
 RDIR="builds"

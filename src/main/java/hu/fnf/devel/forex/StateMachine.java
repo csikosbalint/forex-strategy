@@ -2,7 +2,6 @@ package hu.fnf.devel.forex;
 
 import hu.fnf.devel.forex.database.Order;
 import hu.fnf.devel.forex.database.Database;
-import hu.fnf.devel.forex.database.Strategy;
 import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.utils.RobotException;
 import hu.fnf.devel.forex.utils.Signal;
@@ -156,7 +155,7 @@ public class StateMachine implements IStrategy {
 		return context;
 	}
 
-	private State recignizeState() throws RobotException, JFException{
+	private State recognizeState() throws RobotException, JFException{
 		// TODO: recognize states
 		State ret = null;
 		switch (context.getEngine().getOrders().size()) {
@@ -171,10 +170,14 @@ public class StateMachine implements IStrategy {
 			 * one order..trying to determine state
 			 */
 			IOrder iOrder = context.getEngine().getOrders().get(0);
-			ret = State.valueOf(iOrder.getComment());
-			if ( ret == null ) {
+			ret = State.valueOf(iOrder.getLabel().split("AND")[0]);
+			if ( ret != null && nextState != null && !ret.getName().contains(nextState.getName()))  {
+				logger.info("Not the same next and recognized: " + ret.getName() + "/" + nextState.getName());
+			}
+			if (ret == null) {
 				Main.printDetails(iOrder);
-				throw new RobotException("Unmanaged order detected ctime:" + iOrder.getCreationTime() + " id #" + iOrder.getId() );
+				throw new RobotException("Unmanaged order detected ctime:" + iOrder.getCreationTime() + " id #"
+						+ iOrder.getId());
 			}
 			Order order = Database.get(iOrder.getCreationTime());
 			Database.add(order);
@@ -205,7 +208,7 @@ public class StateMachine implements IStrategy {
 		}
 
 		try {
-			changeState(recignizeState());
+			changeState(recognizeState());
 		} catch (RobotException e) {
 			logger.fatal("Cannot change or recognize state. Running strategy is not advised!", e);
 			System.exit(-1);
@@ -214,10 +217,9 @@ public class StateMachine implements IStrategy {
 		/*
 		 * log start time,version and state to database
 		 */
-		Strategy s = new Strategy();
-		s.setName(state.getName());
+		
 		Order order = new Order();
-		order.setStrategy(s);
+		order.setStrategyname(state.getName());;
 		startTime = new Date().getTime();
 		order.setId(startTime);
 		order.setOrderid("VERSION"); // VERSION is replaced by build.sh
@@ -245,9 +247,7 @@ public class StateMachine implements IStrategy {
 		}
 		logger.info("testing database:		id:DATEANDTIME"); // DATEANDTIME is replaced by build.sh
 		Order order = new Order();
-		Strategy s = new Strategy();
-		s.setName("TestState");
-		order.setStrategy(s);
+		order.setStrategyname("TestState");
 		order.setId(Long.valueOf("DATEANDTIME")); // DATEANDTIME is replaced by build.sh
 		order.setPeriod(Period.TICK.name());
 		order.setLaststate(IOrder.State.CREATED.name());
@@ -348,7 +348,7 @@ public class StateMachine implements IStrategy {
 				if (!bestState.executeCommands()) {
 					logger.fatal("Cannot execute best state commands! Trying to recognize actual state...");
 					try {
-						setNextState(recignizeState());
+						setNextState(recognizeState());
 					} catch (JFException e) {
 						if (e.getMessage().contains("locked")) {
 							logger.debug("State change already in progress. Dropping this change thread!");
@@ -394,17 +394,30 @@ public class StateMachine implements IStrategy {
 //					+ message.getContent());
 //			return;
 //		} else {
-			if (message.getOrder().getState() == IOrder.State.CLOSED) {
-				/*
-				 * closing procedure
-				 */
-				Order o = Database.get(message.getOrder().getCreationTime());
-				logger.info("Order #" + o.getOrderid() + " removed from memory.");
-			}
+//			if (message.getOrder().getState() == IOrder.State.CLOSED) {
+//				/*
+//				 * closing procedure
+//				 */
+//				try {
+//					Database.remove(message.getOrder().getCreationTime());
+//				} catch (RobotException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//			}
 //		}
+		if ( !message.getOrder().getLabel().contains("AND") ) {
+			throw new JFException("Label does not contain keyword...this is not my order. Leaving this account...");
+		}
 		switch (message.getType()) {
 		case ORDER_SUBMIT_OK:
 			orderMessage(message.getOrder(), " submitted: ");
+			try {
+				Database.add(message.getOrder());
+			} catch (RobotException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			break;
 		case ORDER_SUBMIT_REJECTED:
 			orderMessage(message.getOrder(), " rejected: ");
@@ -413,7 +426,19 @@ public class StateMachine implements IStrategy {
 				logger.error("Rejected order has exceeeded resubmit attempt count. Rollback!");
 				logger.error("Reason: " + message.getReasons());
 				try {
-					changeState(recignizeState());
+					Database.add(message.getOrder());
+				} catch (RobotException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				try {
+					Database.remove(message.getOrder());
+				} catch (RobotException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				try {
+					changeState(recognizeState());
 				} catch (RobotException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -435,7 +460,14 @@ public class StateMachine implements IStrategy {
 		case ORDER_FILL_OK:
 			orderMessage(message.getOrder(), " filled:    ");
 			try {
-				changeState(getNextState());
+				Database.add(message.getOrder());
+			} catch (RobotException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			try {
+				//changeState(getNextState());
+				changeState(recognizeState());
 			} catch (RobotException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -445,7 +477,7 @@ public class StateMachine implements IStrategy {
 			orderMessage(message.getOrder(), " cancelled: ");
 			try {
 				logger.info("change back");
-				changeState(recignizeState());
+				changeState(recognizeState());
 			} catch (RobotException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -473,10 +505,16 @@ public class StateMachine implements IStrategy {
 			break;
 		case ORDER_CLOSE_OK:
 			orderMessage(message.getOrder(), " closed:   ");
+			try {
+				Database.remove(message.getOrder());
+			} catch (RobotException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			logger.info("New balance:............................................ $"
 					+ StateMachine.getInstance().getContext().getAccount().getBalance());
 			try {
-				changeState(getNextState());
+				changeState(recognizeState());
 			} catch (RobotException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -489,7 +527,7 @@ public class StateMachine implements IStrategy {
 				logger.error("Rejected order has exceeeded resubmit attempt count. Rollback!");
 				logger.error("Reason: " + message.getReasons());
 				try {
-					changeState(recignizeState());
+					changeState(recognizeState());
 				} catch (RobotException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -521,11 +559,8 @@ public class StateMachine implements IStrategy {
 	}
 
 	private void orderMessage(IOrder order, String string) {
-		if (order.getId() != null) {
-			logger.info("Order #" + order.getId() + " @ " + order.getInstrument() + string + order);
-		} else {
-			logger.info("Order ctime-" + order.getCreationTime() + " @ " + order.getInstrument() + string + order);
-		}
+		logger.info(string);
+		Main.printDetails(order);
 	}
 
 	@Override
