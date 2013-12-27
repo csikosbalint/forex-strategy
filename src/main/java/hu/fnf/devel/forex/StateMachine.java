@@ -107,12 +107,12 @@ public class StateMachine implements IStrategy {
 	 * static
 	 */
 
-	public static void setNextState(State nextState) throws JFException {
+	public static void setNextState(State nextState) throws RobotException {
 		if (!isStateLock()) {
 			setStateLock(true);
 			StateMachine.nextState = nextState;
 		} else {
-			throw new JFException("state is locked.");
+			throw new RobotException("State change in progress. Next state is alredy locked!");
 		}
 	}
 	
@@ -156,19 +156,38 @@ public class StateMachine implements IStrategy {
 		return context;
 	}
 
-	private State recignizeState() throws JFException {
+	private State recignizeState() throws RobotException, JFException{
 		// TODO: recognize states
 		State ret = null;
-
-		if (context.getEngine().getOrders().size() == 0) {
+		switch (context.getEngine().getOrders().size()) {
+		case 0:
+			/*
+			 * no order..starting state
+			 */
 			ret = new SignalSeekerState();
-			logger.info("------------- " + ret.getName() + " state recognized!");
-			return ret;
-		} else {
-			logger.fatal("No alg. to determine state!");
-			return null;
+			break;
+		case 1:
+			/*
+			 * one order..trying to determine state
+			 */
+			IOrder iOrder = context.getEngine().getOrders().get(0);
+			ret = State.valueOf(iOrder.getComment());
+			if ( ret == null ) {
+				Main.printDetails(iOrder);
+				throw new RobotException("Unmanaged order detected ctime:" + iOrder.getCreationTime() + " id #" + iOrder.getId() );
+			}
+			Order order = Database.get(iOrder.getCreationTime());
+			Database.add(order);
+			break;
+		default:
+			/*
+			 * more order..some complex state or unmanaged orders
+			 */
+			break;
 		}
-
+		
+		logger.info("------------- " + ret.getName() + " state recognized!");
+		return ret;
 	}
 
 	@Override
@@ -178,14 +197,18 @@ public class StateMachine implements IStrategy {
 		try {
 			checkCapabilities();
 		} catch (RobotException e) {
-			throw new JFException("Mandatory capabality check failed!", e);
+			if ( e.getMessage().contains("database") ) {
+				logger.fatal("Mandatory capabality check failed!", e);
+				System.exit(-1);
+			}
+			logger.warn("Some capabilities are not available", e);
 		}
 
 		try {
 			changeState(recignizeState());
 		} catch (RobotException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.fatal("Cannot change or recognize state. Running strategy is not advised!", e);
+			System.exit(-1);
 		}
 		
 		/*
@@ -242,7 +265,7 @@ public class StateMachine implements IStrategy {
 		try {
 			Database.remove(order.getId());
 		} catch (RobotException e) {
-			throw new RobotException("Cannot remove test tow from database!",e);
+			throw new RobotException("Cannot remove test row from database!",e);
 		}
 		logger.info("database rw/mod:        OK");
 		logger.info("account id:		    " + context.getAccount().getAccountId());
@@ -318,13 +341,8 @@ public class StateMachine implements IStrategy {
 				logger.info(bestState.getName() + " state is selected with " + bestSignal.getValue());
 				try {
 					setNextState(bestState);
-				} catch (JFException e) {
-					if (e.getMessage().contains("locked")) {
-						logger.debug("State change already in progress. Dropping this change thread!");
-						return;
-					} else {
-						throw e;
-					}
+				} catch ( RobotException e) {
+					e.printStackTrace();
 				}
 				bestState.prepareCommands(bestSignal);
 				if (!bestState.executeCommands()) {
@@ -338,6 +356,8 @@ public class StateMachine implements IStrategy {
 						} else {
 							throw e;
 						}
+					} catch (RobotException e) {
+						
 					}
 				}
 			} else {
@@ -365,9 +385,7 @@ public class StateMachine implements IStrategy {
 				logger.info("Reasons: " + message.getReasons());
 			}
 			return;
-		}
-		IOrder iorder = message.getOrder();
-		
+		}		
 		/*
 		 * order message
 		 */
@@ -518,8 +536,8 @@ public class StateMachine implements IStrategy {
 
 	@Override
 	public void onStop() throws JFException {
-		Order order = Database.get(startTime); // DATEANDTIME is replaced by build.sh
-		logger.info(order.toString());
+		Order order = Database.get(startTime);
+		logger.info(order.getId());
 		order.setLaststate(IOrder.State.CLOSED.name());
 		order.setClose( (new Date()).getTime() );
 		order.setProfit(context.getAccount().getBaseEquity());

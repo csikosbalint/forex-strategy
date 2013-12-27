@@ -40,7 +40,6 @@ if [ "$CMT" != "no" ]
 then
     read -p "Change log: " CHANGE
     git commit -a -m "$CHANGE"
-    git push
     VERSION="$(date +%Y%m%d)GIT$(git show HEAD --abbrev-commit| head -1 | cut -d" " -f2)"
     DATEANDTIME="$(date +%Y%m%d%H%M%S)"
 else
@@ -61,6 +60,11 @@ do
     sed -i "s/$VERSION/VERSION/g" $MAIN
     sed -i "s/$DATEANDTIME/DATEANDTIME/g" $MAIN
 done
+
+if [ "$CMT" != "no" ]
+then
+    git push
+fi
 
 if [ "$CPY" != "no" ]
 then

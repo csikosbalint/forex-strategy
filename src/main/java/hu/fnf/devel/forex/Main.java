@@ -31,6 +31,7 @@ import org.apache.log4j.PropertyConfigurator;
 import com.dukascopy.api.DataType;
 import com.dukascopy.api.Filter;
 import com.dukascopy.api.IChart;
+import com.dukascopy.api.IOrder;
 import com.dukascopy.api.Instrument;
 import com.dukascopy.api.LoadingProgressListener;
 import com.dukascopy.api.OfferSide;
@@ -235,6 +236,14 @@ public class Main {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	public static void printDetails(IOrder iOrder) {
+		logger.debug("\tid:            " + iOrder.getId());
+		logger.debug("\tctime:         " + iOrder.getCreationTime());
+		logger.debug("\tcurrency:      " + iOrder.getInstrument());
+		logger.debug("\tcomment:       " + iOrder.getComment());
+		logger.debug("\tprofit/loss:   " + iOrder.getProfitLossInUSD());
 	}
 
 }

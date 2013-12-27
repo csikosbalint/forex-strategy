@@ -13,6 +13,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
+import javax.persistence.Query;
+import javax.persistence.TypedQuery;
 
 import org.apache.log4j.Logger;
 
@@ -29,6 +31,7 @@ public class Database {
 	private static List<Order> orders = new ArrayList<Order>();
 
 	public static Order get(long id) {
+		Order ret = null;
 		/*
 		 * 1. from memory
 		 */
@@ -42,7 +45,17 @@ public class Database {
 		/*
 		 * 2. from database
 		 */
-		Order ret = (Order) em.createNamedQuery("Order.findByCreationTime").setParameter("getCreationTime", id); 
+		Query query = em.createNamedQuery("Order.findByCreationTime").setParameter("getCreationTime", id);
+		@SuppressWarnings("rawtypes")
+		List result = query.getResultList();
+		switch (result.size()) {
+		case 1:
+			ret = (Order) result.get(0);
+			break;
+		default:
+			ret = null;
+			break;
+		}
 		return ret;
 	}
 
@@ -53,8 +66,6 @@ public class Database {
 		 */
 		if (orders.contains(order)) {
 			orders.remove(order);
-		} else {
-			throw new RobotException("ctime: " + id + " cannot be found in memory!");
 		}
 		if (order.getStrategy().getName().equalsIgnoreCase("TestState")) {
 			try {
@@ -63,7 +74,7 @@ public class Database {
 				userTransaction.commit();
 				logger.debug("Order ctime: " + order.getId() + " successfully removed from database.");
 			} catch (Exception e) {
-				logger.error("Order data cannotbe upadted at database.Trying to send order data via mail.", e);
+				logger.error("Order data cannot be removed at database.Trying to send order data via mail.", e);
 				Main.sendMail("Unmodified Order!", order.toString(), Main.MASTER);
 				throw new RobotException(e);
 			}
@@ -72,36 +83,41 @@ public class Database {
 
 	public static synchronized void merge(Order order) throws RobotException {
 		if (orders.contains(order)) {
-			try {
-				userTransaction.begin();
-				em.merge(order);
-				userTransaction.commit();
-				logger.debug("Order ctime: " + order.getId() + " successfully updated at database.");
-			} catch (Exception e) {
-				logger.error("Order data cannotbe upadted at database.Trying to send order data via mail.", e);
-				Main.sendMail("Unmodified Order!", order.toString(), Main.MASTER);
-				throw new RobotException(e);
-			}
+			logger.info("#" + order.getId() + "/" + order.getOrderid() + " order cannot be found in memory!");
+		}
+		try {
+			userTransaction.begin();
+			em.merge(order);
+			userTransaction.commit();
+			logger.debug("Order ctime: " + order.getId() + " successfully updated at database.");
+		} catch (Exception e) {
+			logger.error("Order data cannotbe upadted at database.Trying to send order data via mail.", e);
+			Main.sendMail("Unmodified Order!", order.toString(), Main.MASTER);
+			throw new RobotException(e);
 		}
 	}
 
 	public static synchronized void add(Order order) throws RobotException {
-		orders.add(order);
-		try {
-			order.setAddress(Inet4Address.getLocalHost().getHostAddress());
-		} catch (UnknownHostException e1) {
-			logger.error("Cannot determine host IP address for order!");
-			order.setAddress("0.0.0.0");
-		}
-		try {
-			userTransaction.begin();
-			em.persist(order);
-			userTransaction.commit();
-			logger.debug("Order ctime: " + order.getId() + " successfully added to database.");
-		} catch (Exception e) {
-			logger.error("Order data cannotbe recorded to the database.Trying to send order data via mail.", e);
-			Main.sendMail("Unrecorded Order!", order.toString(), Main.MASTER);
-			throw new RobotException(e);
+		Order o = get(order.getId());
+		if (o != null && !orders.contains(o) ) {
+			orders.add(o);
+		} else {
+			try {
+				order.setAddress(Inet4Address.getLocalHost().getHostAddress());
+			} catch (UnknownHostException e1) {
+				logger.error("Cannot determine host IP address for order!");
+				order.setAddress("0.0.0.0");
+			}
+			try {
+				userTransaction.begin();
+				em.persist(order);
+				userTransaction.commit();
+				logger.debug("Order ctime: " + order.getId() + " successfully added to database.");
+			} catch (Exception e) {
+				logger.error("Order data cannotbe recorded to the database.Trying to send order data via mail.", e);
+				Main.sendMail("Unrecorded Order!", order.toString(), Main.MASTER);
+				throw new RobotException(e);
+			}
 		}
 	}
 

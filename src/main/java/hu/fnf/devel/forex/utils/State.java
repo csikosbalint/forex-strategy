@@ -4,6 +4,10 @@ import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.commands.CloseAllCommand;
 import hu.fnf.devel.forex.commands.Command;
 import hu.fnf.devel.forex.commands.OpenCommand;
+import hu.fnf.devel.forex.states.MACDSample452State;
+import hu.fnf.devel.forex.states.ScalpHolder7State;
+import hu.fnf.devel.forex.states.SignalSeekerState;
+import hu.fnf.devel.forex.states.ThreeLittlePigsState;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -105,5 +109,19 @@ public abstract class State {
 	
 	public static boolean Condition1(State s) {
 		return false;
+	}
+
+	public static State valueOf(String comment) {
+		State ret = null;
+		if (comment.contains("SignalSeekerState")) {
+			ret = new SignalSeekerState();
+		} else if (comment.contains("MACDSample452State")) {
+			ret = new MACDSample452State();
+		} else if (comment.contains("ScalpHolder7State")) {
+			ret = new ScalpHolder7State();
+		} else if (comment.contains("ThreeLittlePigsState")) {
+			ret = new ThreeLittlePigsState();
+		}
+		return ret;
 	}
 }
