@@ -55,7 +55,8 @@ public class Main {
 	 */
 	// public final static String jnlpUrl =
 	// "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
-	public final static String jnlpUrl	= "https://eu-demo.dukascopy.com/fo/platform/jForex";
+	//public final static String jnlpUrl	= "https://eu-demo.dukascopy.com/fo/platform/jForex";
+	public final static String jnlpUrl	= "http://localhost/jForex.jnlp";
 	public final static String userName = "DEMO10037EfVQZEU";
 	public final static String password = "EfVQZ";
 	public final static String MASTER 	= "johnnym@fnf.hu";
@@ -107,12 +108,8 @@ public class Main {
 			BasicConfigurator.configure();
 			logger.info("Using basic configuration for logging.");
 		}
-		logger.info("-------------- Forex robot written by johnnym  --------------");
-		logger.info("-------------- Version: 1.0@" + "DATE" + "     --------------"); // DATE
-																						// is
-																						// replaced
-																						// by
-																						// build.sh
+		logger.info("--- Forex robot written by johnnym");
+		logger.info("--- Version: 1.0@" + "VERSION"); // VERSION is replaced by build.sh
 		setPhase("Initalization");
 		info = new WebInfo();
 		if (args.length > 1 && args[1].equalsIgnoreCase("test")) {
@@ -131,12 +128,12 @@ public class Main {
 					}
 
 					public void onDisconnect() {
-						logger.info("Client has been disconnected...");
+						logger.info("Client has been disconnected.Trying to reconnect...");
 						client.reconnect();
 					}
 
 					public void onConnect() {
-						logger.info("Client has been re-connected...");
+						logger.info("Client has been connected...");
 					}
 				});
 			} catch (Exception e) {

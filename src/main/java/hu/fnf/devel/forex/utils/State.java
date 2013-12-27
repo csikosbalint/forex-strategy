@@ -40,7 +40,7 @@ public abstract class State {
 	public void prepareCommands(Signal signal) {
 		switch (signal.getTag()) {
 		case StateMachine.OPEN:
-			commands.add(new OpenCommand(signal, getName()));
+			commands.add(new OpenCommand(signal));
 			break;
 		case StateMachine.CLOSE:
 			commands.add(new CloseAllCommand());

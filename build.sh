@@ -40,21 +40,31 @@ if [ "$CMT" != "no" ]
 then
     read -p "Change log: " CHANGE
     git commit -a -m "$CHANGE"
-    TIME="$(date +%Y%m%d)GIT$(git show HEAD --abbrev-commit| head -1 | cut -d" " -f2)"
+    git push
+    VERSION="$(date +%Y%m%d)GIT$(git show HEAD --abbrev-commit| head -1 | cut -d" " -f2)"
+    DATEANDTIME="$(date +%Y%m%d%H%M%S)"
 else
-    TIME="$(date +%Y%m%d%H%M%S)"
+    VERSION="$(date +%Y%m%d)GIT$(git show HEAD --abbrev-commit| head -1 | cut -d" " -f2)"
+    DATEANDTIME="$(date +%Y%m%d%H%M%S)"
 fi
 
-MAIN="src/main/java/hu/fnf/devel/forex/Main.java"
 SERVER="jenna.fnf.hu"
 RDIR="builds"
-
-sed -i "s/DATE/$TIME/g" $MAIN
+for MAIN in $(find src/main/java/hu/fnf/devel/forex/ -name *.java)
+do
+    sed -i "s/VERSION/$VERSION/g" $MAIN
+    sed -i "s/DATEANDTIME/$DATEANDTIME/g" $MAIN
+done
 mvn  assembly:assembly -P Main
-sed -i "s/$TIME/DATE/g" $MAIN
+for MAIN in $(find src/main/java/hu/fnf/devel/forex/ -name *.java)
+do
+    sed -i "s/$VERSION/VERSION/g" $MAIN
+    sed -i "s/$DATEANDTIME/DATEANDTIME/g" $MAIN
+done
+
 if [ "$CPY" != "no" ]
 then
-    scp target/Main.jar $SERVER:./$RDIR/$TIME.jar
+    scp target/Main.jar $SERVER:./$RDIR/$DATEANDTIME.jar
     if [ "$RUN" != "no" ]
     then
         ssh $SERVER 'java -jar $(ls -t builds/*.jar | head -1) log4j.properties &'
