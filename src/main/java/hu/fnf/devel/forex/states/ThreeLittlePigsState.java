@@ -74,6 +74,7 @@ public class ThreeLittlePigsState extends State {
 	public Set<State> getNextStates() {
 		Set<State> nextstates = new HashSet<State>();
 		nextstates.add(new SignalSeekerState());
+		nextstates.add(new PanicState());
 		return nextstates;
 	}
 

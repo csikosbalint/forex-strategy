@@ -54,17 +54,17 @@ public class MACDSample452State extends State {
 	}
 
 	public Signal getSignal(Instrument instrument, ITick tick, State actual) throws JFException {
-//		if (instruments.contains(instrument) ) {
-//			/*
-//			 * close strategy
-//			 */
-//			close.reset();
-//			Signal challenge = new Signal(instrument, getAmount(), StateMachine.CLOSE);
-//			double max = close.getMax();
-//			double act = close.calcProbability(challenge, tick, actual);
-//			challenge.setValue(act / max);
-//			return challenge;
-//		}
+		if (instruments.contains(instrument) ) {
+			/*
+			 * close strategy
+			 */
+			close.reset();
+			Signal challenge = new Signal(instrument, getAmount(), StateMachine.CLOSE);
+			double max = close.getMax();
+			double act = close.calcProbability(challenge, tick, actual);
+			challenge.setValue(act / max);
+			return challenge;
+		}
 		return null;
 	}
 
@@ -93,7 +93,8 @@ public class MACDSample452State extends State {
 	@Override
 	public Set<State> getNextStates() {
 		Set<State> nextstates = new HashSet<State>();
-		nextstates.add(new SignalSeekerState());
+		nextstates.add(StateMachine.getInstanceOf("SignalSeekerState"));
+		nextstates.add(StateMachine.getInstanceOf("PanicState"));
 		return nextstates;
 	}
 }

@@ -7,9 +7,6 @@ import com.dukascopy.api.OfferSide;
 import com.dukascopy.api.Period;
 import com.dukascopy.api.IEngine.OrderCommand;
 import com.dukascopy.api.IIndicators.AppliedPrice;
-import com.dukascopy.api.impl.Indicators;
-import com.dukascopy.api.indicators.IIndicator;
-import com.dukascopy.charts.listener.ChartModeChangeListener.ChartMode;
 
 import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.utils.Criterion;

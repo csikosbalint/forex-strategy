@@ -18,8 +18,6 @@ import javax.persistence.Query;
 import org.apache.log4j.Logger;
 
 import com.dukascopy.api.IOrder;
-import com.dukascopy.api.IOrder.State;
-import com.dukascopy.api.Period;
 
 public class Database {
 	private static final Logger logger = Logger.getLogger(Database.class);
@@ -75,7 +73,7 @@ public class Database {
 				logger.debug("Order ctime: " + order.getId() + " successfully removed from database.");
 			} catch (Exception e) {
 				logger.error("Order data cannot be removed at database.Trying to send order data via mail.", e);
-				Main.sendMail("Unmodified Order!", order.toString(), Main.MASTER);
+				Main.sendMail("Unmodified Order!", order.toString());
 				throw new RobotException(e);
 			}
 		}
@@ -106,7 +104,7 @@ public class Database {
 			logger.debug("Order ctime: " + order.getId() + " successfully updated at database.");
 		} catch (Exception e) {
 			logger.error("Order data cannotbe upadted at database.Trying to send order data via mail.", e);
-			Main.sendMail("Unmodified Order!", order.toString(), Main.MASTER);
+			Main.sendMail("Unmodified Order!", order.toString());
 			throw new RobotException(e);
 		}
 	}
@@ -129,7 +127,7 @@ public class Database {
 				logger.debug("Order ctime: " + order.getId() + " successfully added to database.");
 			} catch (Exception e) {
 				logger.error("Order data cannotbe recorded to the database.Trying to send order data via mail.", e);
-				Main.sendMail("Unrecorded Order!", order.toString(), Main.MASTER);
+				Main.sendMail("Unrecorded Order!", order.toString());
 				throw new RobotException(e);
 			}
 		}

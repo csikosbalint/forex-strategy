@@ -48,7 +48,6 @@ public class ScalpHolder7State extends State {
 	
 	public Signal getSignal(Instrument instrument, ITick tick, State actual) throws JFException {
 		if (instruments.contains(instrument)) {
-			logger.info("tick on " + instrument.name());
 			/*
 			 * open strategy
 			 */
@@ -76,7 +75,8 @@ public class ScalpHolder7State extends State {
 	@Override
 	public Set<State> getNextStates() {
 		Set<State> nextstates = new HashSet<State>();
-		nextstates.add(new SignalSeekerState());
+		nextstates.add(StateMachine.getInstanceOf("SignalSeekerState"));
+		nextstates.add(StateMachine.getInstanceOf("PanicState"));
 		return nextstates;
 	}
 }

@@ -2,6 +2,7 @@ package hu.fnf.devel.forex;
 
 import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.utils.Info;
+import hu.fnf.devel.forex.utils.RobotException;
 import hu.fnf.devel.forex.utils.State;
 import hu.fnf.devel.forex.utils.WebInfo;
 
@@ -11,10 +12,15 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.URL;
+import java.net.URLConnection;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.Future;
@@ -23,6 +29,9 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.mail.*;
+import javax.mail.internet.*;
+import javax.activation.*;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
@@ -58,8 +67,8 @@ public class Main {
 	// "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
 	public final static String jnlpUrl	= "https://eu-demo.dukascopy.com/fo/platform/jForex";
 	//public final static String jnlpUrl	= "http://localhost/jForex.jnlp";
-	public final static String userName = "DEMO10037kPsFrEU";
-	public final static String password = "kPsFr";
+	public final static String userName = "DEMO10037YgwSCEU";
+	public final static String password = "YgwSC";
 	public final static String MASTER 	= "johnnym@fnf.hu";
 
 	/**
@@ -219,10 +228,50 @@ public class Main {
 		lastILog = msg;
 		logger.info(msg);
 	}
-	
-	public static void sendMail(String subject, String body, String to) {
-		logger.info("Mail \"" + subject +"\" has been sent to " + to);
-		return;
+
+	public static void sendMail(String subject, String body) throws RobotException {
+		logger.info("Mail \"" + subject + "\" has been sent to " + Main.MASTER);
+		// Recipient's email ID needs to be mentioned.
+		String to = Main.MASTER;
+
+		// Sender's email ID needs to be mentioned
+		String from = "fxrobot@fnf.hu";
+
+		// Assuming you are sending email from localhost
+		String host = "mail.fnf.hu";
+
+		// Get system properties
+		Properties properties = System.getProperties();
+
+		// Setup mail server
+		properties.setProperty("mail.smtp.host", host);
+
+		// Get the default Session object.
+		Session session = Session.getDefaultInstance(properties);
+
+		try {
+			// Create a default MimeMessage object.
+			MimeMessage message = new MimeMessage(session);
+
+			// Set From: header field of the header.
+			message.setFrom(new InternetAddress(from));
+
+			// Set To: header field of the header.
+			message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
+
+			// Set Subject: header field
+			message.setSubject(subject);
+
+			// Now set the actual message
+			message.setText(body);
+
+			// Send message
+			Transport.send(message);
+			System.out.println("Sent message successfully....");
+
+		} catch (Exception err) {
+			throw new RobotException("Cannot send mail!", err);
+		}
 	}
 
 	public static void test() {

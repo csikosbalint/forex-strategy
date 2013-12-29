@@ -6,7 +6,6 @@ import com.dukascopy.api.IOrder;
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.JFException;
 import com.dukascopy.api.OfferSide;
-import com.dukascopy.api.Period;
 
 import hu.fnf.devel.forex.Main;
 import hu.fnf.devel.forex.StateMachine;
@@ -25,7 +24,6 @@ public class Scalp7Close extends CloseCriterionDecorator {
 	private final int a = 50;
 	private final double r1 = 1.0;
 	private final double pip_close = 0.05;
-	private final int mins10 = 600000;
 	private final int mins15 = 900000;
 	public Scalp7Close(Criterion criterion) {
 		super(criterion);

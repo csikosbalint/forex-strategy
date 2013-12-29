@@ -39,7 +39,8 @@ public class BadLuckPanic extends ExclusionDecorator {
 				}
 				if ( total < 0 ) {
 					setExclusion();
-					logger.fatal("Last 3 trade couldn't make profit! This is a PANIC!");
+					logger.fatal("Last 3 trade couldn't make profit!");
+					StateMachine.getInstance().getState().setPanic(true);
 				}
 			}
 				

@@ -2,7 +2,12 @@ package hu.fnf.devel.forex;
 
 import hu.fnf.devel.forex.database.Order;
 import hu.fnf.devel.forex.database.Database;
+import hu.fnf.devel.forex.states.ExitState;
+import hu.fnf.devel.forex.states.MACDSample452State;
+import hu.fnf.devel.forex.states.PanicState;
+import hu.fnf.devel.forex.states.ScalpHolder7State;
 import hu.fnf.devel.forex.states.SignalSeekerState;
+import hu.fnf.devel.forex.states.ThreeLittlePigsState;
 import hu.fnf.devel.forex.utils.RobotException;
 import hu.fnf.devel.forex.utils.Signal;
 import hu.fnf.devel.forex.utils.State;
@@ -13,7 +18,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
@@ -50,12 +58,13 @@ public class StateMachine implements IStrategy {
 	private static StateMachine instance;
 	private static State state;
 	private static State nextState;
+	private static Set<State> allStates = new HashSet<State>();
 	private static boolean stateLock = false;
 	
 	private IContext context;
 	
-	private double startBalance;
-	private long startTime;
+	private double 	startBalance;
+	private long 	startTime;
 
 	private Collection<IChart> charts = new ArrayList<IChart>();
 	public static Map<IOrder, Integer> resubmitAttempts = new HashMap<IOrder, Integer>();
@@ -97,6 +106,42 @@ public class StateMachine implements IStrategy {
 			}
 		}
 	}
+	
+	public static synchronized State getInstanceOf(String stateName) {
+		/*
+		 * ..in instances
+		 */
+		for (State state : StateMachine.getAllStates()) {
+			if ( state.getName().equalsIgnoreCase(stateName) ) {
+				return state;
+			}
+		}
+		/*
+		 * ..creating a new instance
+		 */
+		logger.debug("searching for state \"" + stateName + "\"");
+		State state = null;
+		if (stateName == null ) {
+			return null;
+		} else if (stateName.contains("SignalSeekerState")) {
+			state = new SignalSeekerState();
+		} else if (stateName.contains("MACDSample452State")) {
+			state = new MACDSample452State();
+		} else if (stateName.contains("ScalpHolder7State")) {
+			state = new ScalpHolder7State();
+		} else if (stateName.contains("ThreeLittlePigsState")) {
+			state = new ThreeLittlePigsState();
+		} else if (stateName.contains("SignalSeekerState")) {
+			state = new SignalSeekerState();
+		} else if (stateName.contains("PanicState")) {
+			state = new PanicState();
+		} else if (stateName.contains("ExitState")) {
+			state = new ExitState();
+		}
+		logger.debug("new state \"" + stateName + "\" created.");
+		allStates.add(state);
+		return state;
+	}
 
 	/*
 	 * --------- END ---------
@@ -116,8 +161,33 @@ public class StateMachine implements IStrategy {
 	}
 	
 	/*
+	 * private
+	 */
+	
+	private void stateTraversal(State s) {
+		Stack<State> todo = new Stack<State>();
+		Stack<State> done = new Stack<State>();
+		todo.addAll(s.getNextStates());
+		while (!todo.empty()) {
+			State pick = todo.pop();
+			if ( !done.contains(pick) ) {
+				done.add(pick);
+				logger.debug("visit: " + pick.getName());
+				if ( pick.getNextStates() != null && !todo.containsAll(pick.getNextStates())) { 
+					todo.addAll(pick.getNextStates());
+				}
+			}
+		}
+	}
+	
+	/*
 	 * public
 	 */
+	
+	public static Set<State> getAllStates() {
+		return allStates;
+	}
+	
 	public void setStartBalance(double startBalance) {
 		this.startBalance = startBalance;
 	}
@@ -156,7 +226,6 @@ public class StateMachine implements IStrategy {
 	}
 
 	private State recognizeState() throws RobotException, JFException{
-		// TODO: recognize states
 		State ret = null;
 		switch (context.getEngine().getOrders().size()) {
 		case 0:
@@ -170,15 +239,16 @@ public class StateMachine implements IStrategy {
 			 * one order..trying to determine state
 			 */
 			IOrder iOrder = context.getEngine().getOrders().get(0);
-			ret = State.valueOf(iOrder.getLabel().split("AND")[0]);
-			if ( ret != null && nextState != null && !ret.getName().contains(nextState.getName()))  {
-				logger.info("Not the same next and recognized: " + ret.getName() + "/" + nextState.getName());
-			}
-			if (ret == null) {
+			if ( !iOrder.getLabel().contains("AND") ) {
 				Main.printDetails(iOrder);
 				throw new RobotException("Unmanaged order detected ctime:" + iOrder.getCreationTime() + " id #"
 						+ iOrder.getId());
 			}
+			ret = StateMachine.getInstanceOf(iOrder.getLabel().split("AND")[0]);
+			if ( ret != null && nextState != null && !ret.getName().contains(nextState.getName()))  {
+				logger.info("Not the same next and recognized: " + ret.getName() + "/" + nextState.getName());
+			}
+
 			Order order = Database.get(iOrder.getCreationTime());
 			Database.add(order);
 			break;
@@ -189,7 +259,7 @@ public class StateMachine implements IStrategy {
 			break;
 		}
 		
-		logger.info("------------- " + ret.getName() + " state recognized!");
+		logger.info("------------- " + ret.getName() + " state is recognized!");
 		return ret;
 	}
 
@@ -210,10 +280,40 @@ public class StateMachine implements IStrategy {
 		try {
 			changeState(recognizeState());
 		} catch (RobotException e) {
-			logger.fatal("Cannot change or recognize state. Running strategy is not advised!", e);
+			logger.fatal("Cannot change or recognize state onStart. Running strategy is not advised!", e);
 			System.exit(-1);
 		}
+		/*
+		 * gathering all possible states
+		 */
+		logger.info("Traversing the state graph...");
+		stateTraversal(state);
 		
+		for (State state : allStates) {
+			logger.info("\t" + state.getName());
+		}
+		/*
+		 * subscribing
+		 */
+
+		logger.info("Subscribing to instruments...");
+
+		/*
+		 * subscribe to instruments related to next states
+		 */
+		Set<Instrument> instruments = new HashSet<Instrument>();
+		for (State s : StateMachine.getAllStates()) {
+			for (Instrument i : s.getInstruments()) {
+				instruments.add(i);
+			}
+		}
+
+		for (Instrument i : instruments) {
+			logger.info("\t" + i.name());
+		}
+
+		context.setSubscribedInstruments(instruments);
+
 		/*
 		 * log start time,version and state to database
 		 */
@@ -268,6 +368,12 @@ public class StateMachine implements IStrategy {
 			throw new RobotException("Cannot remove test row from database!",e);
 		}
 		logger.info("database rw/mod:        OK");
+		try {
+			Main.sendMail("*****SPAM***** start", "start");
+		} catch ( RobotException e) {
+			logger.error("Cannot send mail!", e);
+		}
+		logger.info("mail send:              OK");
 		logger.info("account id:		    " + context.getAccount().getAccountId());
 		logger.info("account state:         " + context.getAccount().getAccountState());
 		logger.info("account balance:	    " + context.getAccount().getBalance() + " "
@@ -389,23 +495,6 @@ public class StateMachine implements IStrategy {
 		/*
 		 * order message
 		 */
-//		if (message.getOrder().getId() != null && !positions.contains(message.getOrder())) {
-//			logger.warn("Not managed order event happened! Order#" + message.getOrder().getId() + ": "
-//					+ message.getContent());
-//			return;
-//		} else {
-//			if (message.getOrder().getState() == IOrder.State.CLOSED) {
-//				/*
-//				 * closing procedure
-//				 */
-//				try {
-//					Database.remove(message.getOrder().getCreationTime());
-//				} catch (RobotException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//			}
-//		}
 		if ( !message.getOrder().getLabel().contains("AND") ) {
 			throw new JFException("Label does not contain keyword...this is not my order. Leaving this account...");
 		}
@@ -416,6 +505,14 @@ public class StateMachine implements IStrategy {
 				Database.add(message.getOrder());
 			} catch (RobotException e) {
 				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			try {
+				changeState(recognizeState());
+			} catch (RobotException e) {
+				if ( state != null ) {
+					state.setPanic(true);
+				}
 				e.printStackTrace();
 			}
 			break;
@@ -440,7 +537,9 @@ public class StateMachine implements IStrategy {
 				try {
 					changeState(recognizeState());
 				} catch (RobotException e) {
-					// TODO Auto-generated catch block
+					if ( state != null ) {
+						state.setPanic(true);
+					}
 					e.printStackTrace();
 				}
 			} else {
@@ -466,11 +565,11 @@ public class StateMachine implements IStrategy {
 				e.printStackTrace();
 			}
 			try {
-				//changeState(getNextState());
 				changeState(recognizeState());
 			} catch (RobotException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				if ( state != null ) {
+					state.setPanic(true);
+				}
 			}
 			break;
 		case ORDER_FILL_REJECTED:
@@ -479,8 +578,9 @@ public class StateMachine implements IStrategy {
 				logger.info("change back");
 				changeState(recognizeState());
 			} catch (RobotException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				if ( state != null ) {
+					state.setPanic(true);
+				}
 			}
 			break;
 		case CALENDAR:
@@ -516,7 +616,9 @@ public class StateMachine implements IStrategy {
 			try {
 				changeState(recognizeState());
 			} catch (RobotException e) {
-				// TODO Auto-generated catch block
+				if ( state != null ) {
+					state.setPanic(true);
+				}
 				e.printStackTrace();
 			}
 			break;
@@ -529,7 +631,9 @@ public class StateMachine implements IStrategy {
 				try {
 					changeState(recognizeState());
 				} catch (RobotException e) {
-					// TODO Auto-generated catch block
+					if ( state != null ) {
+						state.setPanic(true);
+					}
 					e.printStackTrace();
 				}
 			} else {

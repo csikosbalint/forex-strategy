@@ -4,7 +4,9 @@ import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.commands.CloseAllCommand;
 import hu.fnf.devel.forex.commands.Command;
 import hu.fnf.devel.forex.commands.OpenCommand;
+import hu.fnf.devel.forex.states.ExitState;
 import hu.fnf.devel.forex.states.MACDSample452State;
+import hu.fnf.devel.forex.states.PanicState;
 import hu.fnf.devel.forex.states.ScalpHolder7State;
 import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.states.ThreeLittlePigsState;
@@ -31,6 +33,7 @@ public abstract class State {
 	protected Criterion open;
 	protected Criterion close;
 	protected Set<Command> commands;
+	private boolean panic;
 
 	public abstract Signal getSignal(Instrument instrument, ITick tick, State actual) throws JFException;
 
@@ -49,6 +52,7 @@ public abstract class State {
 		case StateMachine.CLOSE:
 			commands.add(new CloseAllCommand());
 		default:
+			logger.warn("No command(s) associated with this signal.");
 			break;
 		}
 	}
@@ -68,6 +72,7 @@ public abstract class State {
 	}
 
 	public boolean onArriving() {
+		setPanic(false);
 		return true;
 	}
 
@@ -107,24 +112,11 @@ public abstract class State {
 		return open;
 	}
 	
-	public static boolean Condition1(State s) {
-		return false;
+	public boolean isPanic() {
+		return panic;
 	}
-
-	public static State valueOf(String comment) {
-		logger.info("searching for state \"" + comment + "\"");
-		State ret = null;
-		if (comment == null ) {
-			return null;
-		} else if (comment.contains("SignalSeekerState")) {
-			ret = new SignalSeekerState();
-		} else if (comment.contains("MACDSample452State")) {
-			ret = new MACDSample452State();
-		} else if (comment.contains("ScalpHolder7State")) {
-			ret = new ScalpHolder7State();
-		} else if (comment.contains("ThreeLittlePigsState")) {
-			ret = new ThreeLittlePigsState();
-		}
-		return ret;
+	
+	public void setPanic(boolean panic) {
+		this.panic = panic;
 	}
 }

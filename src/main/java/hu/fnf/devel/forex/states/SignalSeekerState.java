@@ -28,32 +28,12 @@ public class SignalSeekerState extends State {
 		// SignalSeeker has no intruments
 
 		this.periods.add(Period.TICK);
+		this.instruments = new HashSet<Instrument>();
 	}
 
 	@Override
 	public boolean onArriving() {
-		if (StateMachine.getInstance().getContext().getEngine().getType().equals(IEngine.Type.TEST)) {
-			return true;
-		} else {
-			logger.info("Subscribing to instruments for " + getName());
-
-			/*
-			 * subscribe to instruments related to next states
-			 */
-			instruments = new HashSet<Instrument>();
-			for (State s : getNextStates()) {
-				for (Instrument i : s.getInstruments()) {
-					instruments.add(i);
-				}
-			}
-
-			for (Instrument i : instruments) {
-				logger.debug("\t-" + i.name());
-			}
-
-			StateMachine.getInstance().getContext().setSubscribedInstruments(instruments);
-			return true;
-		}
+		return true;
 	}
 
 	@Override
@@ -95,9 +75,10 @@ public class SignalSeekerState extends State {
 	public Set<State> getNextStates() {
 		Set<State> nextstates = new HashSet<State>();
 		
-		nextstates.add(new ScalpHolder7State());
-		nextstates.add(new MACDSample452State());
-		//nextstates.add(new ThreeLittlePigsState());
+		nextstates.add(StateMachine.getInstanceOf("ScalpHolder7State"));
+		nextstates.add(StateMachine.getInstanceOf("MACDSample452State"));
+		//nextstates.add(StateMachine.valueOf("ThreeLittlePigsState"));
+		nextstates.add(StateMachine.getInstanceOf("PanicState"));
 		return nextstates;
 	}
 
