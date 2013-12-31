@@ -28,7 +28,7 @@ public class MACDClose extends CloseCriterionDecorator {
 	protected double calc(Signal challenge, ITick tick, State actual) {
 
 		try {
-			if (StateMachine.getInstance().getContext().getEngine().getOrders().size() == 0) {
+			if (StateMachine.getInstance().getContext().getEngine().getOrders().size() < 2) {
 				return 0;
 			}
 		} catch (JFException e1) {

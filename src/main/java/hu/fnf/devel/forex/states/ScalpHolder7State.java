@@ -75,8 +75,8 @@ public class ScalpHolder7State extends State {
 	@Override
 	public Set<State> getNextStates() {
 		Set<State> nextstates = new HashSet<State>();
-		nextstates.add(StateMachine.getInstanceOf("SignalSeekerState"));
-		nextstates.add(StateMachine.getInstanceOf("PanicState"));
+		nextstates.add(StateMachine.getStateInstance("SignalSeekerState"));
+		nextstates.add(StateMachine.getStateInstance("PanicState"));
 		return nextstates;
 	}
 }

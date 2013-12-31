@@ -36,7 +36,7 @@ public class Scalp7Close extends CloseCriterionDecorator {
 		 * close strategy
 		 */
 		try {
-			if (StateMachine.getInstance().getContext().getEngine().getOrders().size() == 0) {
+			if (StateMachine.getInstance().getContext().getEngine().getOrders().size() < 2) {
 				return 0;
 			}
 		} catch (JFException e1) {

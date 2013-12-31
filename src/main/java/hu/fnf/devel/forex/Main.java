@@ -12,10 +12,6 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.net.URL;
-import java.net.URLConnection;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashSet;
@@ -25,13 +21,15 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.Future;
 
+import javax.mail.Message;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.mail.*;
-import javax.mail.internet.*;
-import javax.activation.*;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
@@ -42,6 +40,7 @@ import com.dukascopy.api.Filter;
 import com.dukascopy.api.IChart;
 import com.dukascopy.api.IOrder;
 import com.dukascopy.api.Instrument;
+import com.dukascopy.api.JFException;
 import com.dukascopy.api.LoadingProgressListener;
 import com.dukascopy.api.OfferSide;
 import com.dukascopy.api.Period;
@@ -63,10 +62,9 @@ public class Main {
 	/**
 	 * login variables
 	 */
-	// public final static String jnlpUrl =
-	// "https://www.dukascopy.com/client/demo/jclient/jforex.jnlp";
 	public final static String jnlpUrl	= "https://eu-demo.dukascopy.com/fo/platform/jForex";
-	//public final static String jnlpUrl	= "http://localhost/jForex.jnlp";
+	//public final static String userName = "DEMO10037kPsFrEU";
+	//public final static String password = "kPsFr";
 	public final static String userName = "DEMO10037YgwSCEU";
 	public final static String password = "YgwSC";
 	public final static String MASTER 	= "johnnym@fnf.hu";
@@ -76,7 +74,8 @@ public class Main {
 	 */
 	private static final Logger logger = Logger.getLogger(Main.class);
 	
-	private static IClient client;	
+	private static IClient client;
+	private static long processId;
 	private static Info info;
 	/**
 	 * logging variables
@@ -105,7 +104,14 @@ public class Main {
 		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 			public void run() {
 				Main.setPhase("Interrupted");
-				closing();
+				client.stopStrategy(processId);
+//				try {
+//					client.getStartedStrategies().get(StateMachine.getInstance()).onStop();
+//				} catch (JFException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+				//closing();
 				logger.info("------------------------- Done. ----------------------------");
 			}
 		}));
@@ -135,7 +141,7 @@ public class Main {
 					}
 
 					public void onStart(long arg0) {
-
+						processId = arg0;
 					}
 
 					public void onDisconnect() {
@@ -205,7 +211,7 @@ public class Main {
 	private static void closing() {
 		setPhase("Closing");
 		if (client != null && client.isConnected()) {
-			client.disconnect(); // onStop called
+			client.disconnect(); // listener onStop called (?)
 		}
 	}
 

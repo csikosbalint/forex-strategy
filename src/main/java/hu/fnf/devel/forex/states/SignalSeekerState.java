@@ -75,10 +75,10 @@ public class SignalSeekerState extends State {
 	public Set<State> getNextStates() {
 		Set<State> nextstates = new HashSet<State>();
 		
-		nextstates.add(StateMachine.getInstanceOf("ScalpHolder7State"));
-		nextstates.add(StateMachine.getInstanceOf("MACDSample452State"));
+		nextstates.add(StateMachine.getStateInstance("ScalpHolder7State"));
+		nextstates.add(StateMachine.getStateInstance("MACDSample452State"));
 		//nextstates.add(StateMachine.valueOf("ThreeLittlePigsState"));
-		nextstates.add(StateMachine.getInstanceOf("PanicState"));
+		nextstates.add(StateMachine.getStateInstance("PanicState"));
 		return nextstates;
 	}
 

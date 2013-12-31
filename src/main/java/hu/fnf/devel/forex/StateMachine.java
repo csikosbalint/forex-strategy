@@ -20,6 +20,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.Stack;
 
@@ -30,6 +31,9 @@ import com.dukascopy.api.IBar;
 import com.dukascopy.api.IChart;
 import com.dukascopy.api.IContext;
 import com.dukascopy.api.IEngine;
+import com.dukascopy.api.IEngine.OrderCommand;
+import com.dukascopy.api.IMessage.Reason;
+import com.dukascopy.api.IMessage.Type;
 import com.dukascopy.api.IMessage;
 import com.dukascopy.api.IOrder;
 import com.dukascopy.api.IStrategy;
@@ -64,7 +68,8 @@ public class StateMachine implements IStrategy {
 	private IContext context;
 	
 	private double 	startBalance;
-	private long 	startTime;
+//	private long 	startTime;
+	private int		startID;
 
 	private Collection<IChart> charts = new ArrayList<IChart>();
 	public static Map<IOrder, Integer> resubmitAttempts = new HashMap<IOrder, Integer>();
@@ -107,7 +112,7 @@ public class StateMachine implements IStrategy {
 		}
 	}
 	
-	public static synchronized State getInstanceOf(String stateName) {
+	public static synchronized State getStateInstance(String stateName) {
 		/*
 		 * ..in instances
 		 */
@@ -138,9 +143,18 @@ public class StateMachine implements IStrategy {
 		} else if (stateName.contains("ExitState")) {
 			state = new ExitState();
 		}
+		/*
+		 * ..what if state is not allowed?
+		 */
 		logger.debug("new state \"" + stateName + "\" created.");
 		allStates.add(state);
 		return state;
+		/*
+		 * and maybe from text instantly if state is allowed
+		 * Class<?> clazz = Class.forName(className);
+		 * Constructor<?> ctor = clazz.getConstructor(String.class);
+		 * Object object = ctor.newInstance(new Object[] { ctorArgument });
+		 */
 	}
 
 	/*
@@ -228,23 +242,29 @@ public class StateMachine implements IStrategy {
 	private State recognizeState() throws RobotException, JFException{
 		State ret = null;
 		switch (context.getEngine().getOrders().size()) {
-		case 0:
+		case 0|1:
 			/*
 			 * no order..starting state
 			 */
 			ret = new SignalSeekerState();
 			break;
-		case 1:
+		case 2:
 			/*
 			 * one order..trying to determine state
 			 */
-			IOrder iOrder = context.getEngine().getOrders().get(0);
+			IOrder iOrder = null;
+			for (IOrder o: context.getEngine().getOrders() ) {
+				if ( !o.getLabel().contains("START") ) {
+					iOrder = o;
+					break;
+				}
+			}
 			if ( !iOrder.getLabel().contains("AND") ) {
 				Main.printDetails(iOrder);
 				throw new RobotException("Unmanaged order detected ctime:" + iOrder.getCreationTime() + " id #"
 						+ iOrder.getId());
 			}
-			ret = StateMachine.getInstanceOf(iOrder.getLabel().split("AND")[0]);
+			ret = StateMachine.getStateInstance(iOrder.getLabel().split("AND")[0]);
 			if ( ret != null && nextState != null && !ret.getName().contains(nextState.getName()))  {
 				logger.info("Not the same next and recognized: " + ret.getName() + "/" + nextState.getName());
 			}
@@ -266,13 +286,15 @@ public class StateMachine implements IStrategy {
 	@Override
 	public void onStart(IContext context) throws JFException {
 		this.context = context;
-		
+		startID = (new Random()).nextInt(1000);
 		try {
 			checkCapabilities();
 		} catch (RobotException e) {
-			if ( e.getMessage().contains("database") ) {
+			if ( e.getMessage().contains("running")) {
 				logger.fatal("Mandatory capabality check failed!", e);
 				System.exit(-1);
+			} else if ( e.getMessage().contains("database") ) {
+				logger.debug("No database connection...robot still can go on...");
 			}
 			logger.warn("Some capabilities are not available", e);
 		}
@@ -308,31 +330,27 @@ public class StateMachine implements IStrategy {
 			}
 		}
 
-		for (Instrument i : instruments) {
-			logger.info("\t" + i.name());
-		}
-
 		context.setSubscribedInstruments(instruments);
 
 		/*
 		 * log start time,version and state to database
 		 */
-		
-		Order order = new Order();
-		order.setStrategyname(state.getName());;
-		startTime = new Date().getTime();
-		order.setId(startTime);
-		order.setOrderid("VERSION"); // VERSION is replaced by build.sh
-		order.setPeriod(Period.TICK.name());
-		order.setLaststate(IOrder.State.CREATED.name());
-		try {
-			Database.add(order);
-		} catch (RobotException e) {
-			e.printStackTrace();
-		}
+//		
+//		Order order = new Order();
+//		order.setStrategyname(state.getName());;
+//		startTime = new Date().getTime();
+//		order.setId(startTime);
+//		order.setOrderid("VERSION"); // VERSION is replaced by build.sh
+//		order.setPeriod(Period.TICK.name());
+//		order.setLaststate(IOrder.State.CREATED.name());
+//		try {
+//			Database.add(order);
+//		} catch (RobotException e) {
+//			e.printStackTrace();
+//		}
 	}
 
-	private void checkCapabilities() throws RobotException {
+	private void checkCapabilities() throws RobotException, JFException {
 		if (!context.isFullAccessGranted()) {
 			logger.fatal("Full access need to run this strategy!");
 			throw new RobotException("Full access need to run this strategy!");
@@ -345,34 +363,51 @@ public class StateMachine implements IStrategy {
 				setChartDecoration(c);
 			}
 		}
-		logger.info("testing database:		id:DATEANDTIME"); // DATEANDTIME is replaced by build.sh
-		Order order = new Order();
-		order.setStrategyname("TestState");
-		order.setId(Long.valueOf("DATEANDTIME")); // DATEANDTIME is replaced by build.sh
-		order.setPeriod(Period.TICK.name());
-		order.setLaststate(IOrder.State.CREATED.name());
-		try {
-			Database.add(order);
-		} catch (RobotException e) {
-			throw new RobotException("Cannot add test row into database!",e);
+		/*
+		 * check if this is the only robot at account
+		 * if true, than mark the account by startID
+		 */
+		for (IOrder iterable : context.getEngine().getOrders()) {
+			if ( iterable.getLabel().contains("START") ) {
+				throw new RobotException("Robot is already running!");
+			}
 		}
-		order.setLaststate(IOrder.State.CANCELED.name());
-		try {
-			Database.merge(order);
-		} catch (RobotException e) {
-			throw new RobotException("Cannot modify test row in database!",e);
-		}
-		try {
-			Database.remove(order.getId());
-		} catch (RobotException e) {
-			throw new RobotException("Cannot remove test row from database!",e);
-		}
-		logger.info("database rw/mod:        OK");
-		try {
-			Main.sendMail("*****SPAM***** start", "start");
-		} catch ( RobotException e) {
-			logger.error("Cannot send mail!", e);
-		}
+		
+			Set<Instrument> eurusd = new HashSet<Instrument>();
+			eurusd.add(Instrument.EURUSD);
+			context.setSubscribedInstruments(eurusd);
+			context.getEngine().submitOrder("START" + String.valueOf(startID), Instrument.EURUSD, OrderCommand.SELLLIMIT, 0.001, 2.500);
+			context.setSubscribedInstruments(null);
+		
+//		logger.info("testing database:		id:DATEANDTIME"); // DATEANDTIME is replaced by build.sh
+//
+//		Order order = new Order();
+//		order.setStrategyname("TestState");
+//		order.setId(Long.valueOf("DATEANDTIME")); // DATEANDTIME is replaced by build.sh
+//		order.setPeriod(Period.TICK.name());
+//		order.setLaststate(IOrder.State.CREATED.name());
+//		try {
+//			Database.add(order);
+//		} catch (RobotException e) {
+//			throw new RobotException("Cannot add test row into database!",e);
+//		}
+//		order.setLaststate(IOrder.State.CANCELED.name());
+//		try {
+//			Database.merge(order);
+//		} catch (RobotException e) {
+//			throw new RobotException("Cannot modify test row in database!",e);
+//		}
+//		try {
+//			Database.remove(order.getId());
+//		} catch (RobotException e) {
+//			throw new RobotException("Cannot remove test row from database!",e);
+//		}
+//		logger.info("database rw/mod:        OK");
+//		try {
+//			Main.sendMail("*****SPAM***** start", "start");
+//		} catch ( RobotException e) {
+//			logger.error("Cannot send mail!", e);
+//		}
 		logger.info("mail send:              OK");
 		logger.info("account id:		    " + context.getAccount().getAccountId());
 		logger.info("account state:         " + context.getAccount().getAccountState());
@@ -491,7 +526,10 @@ public class StateMachine implements IStrategy {
 				logger.info("Reasons: " + message.getReasons());
 			}
 			return;
-		}		
+		}
+		if ( message.getOrder().getLabel().contains("START") ) {
+			return;
+		}
 		/*
 		 * order message
 		 */
@@ -501,12 +539,12 @@ public class StateMachine implements IStrategy {
 		switch (message.getType()) {
 		case ORDER_SUBMIT_OK:
 			orderMessage(message.getOrder(), " submitted: ");
-			try {
-				Database.add(message.getOrder());
-			} catch (RobotException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+//			try {
+//				Database.add(message.getOrder());
+//			} catch (RobotException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 			try {
 				changeState(recognizeState());
 			} catch (RobotException e) {
@@ -522,18 +560,18 @@ public class StateMachine implements IStrategy {
 			if (attempts > maxOrderResubmitCount) {
 				logger.error("Rejected order has exceeeded resubmit attempt count. Rollback!");
 				logger.error("Reason: " + message.getReasons());
-				try {
-					Database.add(message.getOrder());
-				} catch (RobotException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				try {
-					Database.remove(message.getOrder());
-				} catch (RobotException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+//				try {
+//					Database.add(message.getOrder());
+//				} catch (RobotException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//				try {
+//					Database.remove(message.getOrder());
+//				} catch (RobotException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
 				try {
 					changeState(recognizeState());
 				} catch (RobotException e) {
@@ -558,12 +596,12 @@ public class StateMachine implements IStrategy {
 			break;
 		case ORDER_FILL_OK:
 			orderMessage(message.getOrder(), " filled:    ");
-			try {
-				Database.add(message.getOrder());
-			} catch (RobotException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+//			try {
+//				Database.add(message.getOrder());
+//			} catch (RobotException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 			try {
 				changeState(recognizeState());
 			} catch (RobotException e) {
@@ -605,12 +643,12 @@ public class StateMachine implements IStrategy {
 			break;
 		case ORDER_CLOSE_OK:
 			orderMessage(message.getOrder(), " closed:   ");
-			try {
-				Database.remove(message.getOrder());
-			} catch (RobotException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+//			try {
+//				Database.remove(message.getOrder());
+//			} catch (RobotException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 			logger.info("New balance:............................................ $"
 					+ StateMachine.getInstance().getContext().getAccount().getBalance());
 			try {
@@ -675,20 +713,24 @@ public class StateMachine implements IStrategy {
 
 	@Override
 	public void onStop() throws JFException {
-		Order order = Database.get(startTime);
-		logger.info(order.getId());
-		order.setLaststate(IOrder.State.CLOSED.name());
-		order.setClose( (new Date()).getTime() );
-		order.setProfit(context.getAccount().getBaseEquity());
-		try {
-			Database.merge(order);
-			Database.remove(order.getId());
-		} catch (RobotException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		logger.info("Balance is: $" + context.getAccount().getBalance());
+		Set<Instrument> eurusd = new HashSet<Instrument>();
+		eurusd.add(Instrument.EURUSD);
+		context.setSubscribedInstruments(eurusd);
+		context.getEngine().getOrder("START"+String.valueOf(startID)).close();
+//		Order order = Database.get(startTime);
+//		logger.info(order.getId());
+//		order.setLaststate(IOrder.State.CLOSED.name());
+//		order.setClose( (new Date()).getTime() );
+//		order.setProfit(context.getAccount().getBaseEquity());
+//		context.getEngine().getOrder("START").close();
+//		try {
+//			Database.merge(order);
+//			Database.remove(order.getId());
+//		} catch (RobotException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		logger.info("Balance is: $" + context.getAccount().getEquity());
 	}
 
 	public void addChart(IChart chart) {
