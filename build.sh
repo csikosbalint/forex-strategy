@@ -78,5 +78,5 @@ then
 fi
 if [ "$RUN" != "no" ]
 then
-    java -jar /home/johnnym/git/forex-strategy/target/Main.jar res/log4j.properties  
+    java -jar /home/johnnym/git/forex-strategy/target/Main.jar res/config.properties
 fi

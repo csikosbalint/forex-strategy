@@ -12,6 +12,8 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashSet;
@@ -40,7 +42,6 @@ import com.dukascopy.api.Filter;
 import com.dukascopy.api.IChart;
 import com.dukascopy.api.IOrder;
 import com.dukascopy.api.Instrument;
-import com.dukascopy.api.JFException;
 import com.dukascopy.api.LoadingProgressListener;
 import com.dukascopy.api.OfferSide;
 import com.dukascopy.api.Period;
@@ -58,22 +59,12 @@ import com.dukascopy.api.system.tester.ITesterGui;
 import com.dukascopy.api.system.tester.ITesterUserInterface;
 
 public class Main {
-
-	/**
-	 * login variables
-	 */
-	public final static String jnlpUrl	= "https://eu-demo.dukascopy.com/fo/platform/jForex";
-	public final static String userName = "DEMO10037kPsFrEU";
-	public final static String password = "kPsFr";
-//	public final static String userName = "DEMO10037YgwSCEU";
-//	public final static String password = "YgwSC";
-	public final static String MASTER 	= "johnnym@fnf.hu";
-
+	private static Properties prop = new Properties();
 	/**
 	 * global variables
 	 */
 	private static final Logger logger = Logger.getLogger(Main.class);
-	
+
 	private static IClient client;
 	private static long processId;
 	private static Info info;
@@ -81,8 +72,6 @@ public class Main {
 	 * logging variables
 	 */
 	private static String phase;
-	private static String lastDLog;
-	private static String lastILog;
 
 	public static void setPhase(String phase) {
 		if (Main.phase != null) {
@@ -100,47 +89,72 @@ public class Main {
 	}
 
 	public static void main(String[] args) {
-
+		/*
+		 * SIGTERM signal catch
+		 */
 		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 			public void run() {
 				Main.setPhase("Interrupted");
-				client.stopStrategy(processId);
-//				try {
-//					client.getStartedStrategies().get(StateMachine.getInstance()).onStop();
-//				} catch (JFException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-				//closing();
+				if ( client != null && processId != 0 ) {
+					client.stopStrategy(processId);
+				}
 				logger.info("------------------------- Done. ----------------------------");
 			}
 		}));
-
+		/*
+		 * config parse
+		 */
 		if (args.length > 0) {
-			PropertyConfigurator.configure(args[0]);
-			logger.info("Using config from file.");
-			logger.debug("log4j.properties: " + args[0]);
+			try {
+				prop.load(new FileInputStream(args[0]));
+				PropertyConfigurator.configure(args[0]);
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			}
 		} else {
-			BasicConfigurator.configure();
-			logger.info("Using basic configuration for logging.");
+			System.out.println("Config parameter is necessary!");
+			System.exit(-1);
 		}
+		logger.info("Using config file.");
+		for (Object key : prop.keySet()) {
+			if ( key.toString().contains("assword") ||
+					key.toString().contains("log4j")) {
+				continue;
+			}
+			logger.info("\t" + key.toString() + "\t=\t" + prop.get(key));
+		}
+
 		logger.info("--- Forex robot written by johnnym");
 		logger.info("--- Version: 1.0@" + "VERSION"); // VERSION is replaced by build.sh
+		logger.info("--- Account: " + prop.getProperty("account.user"));
 		setPhase("Initalization");
 		info = new WebInfo();
-		if (args.length > 1 && args[1].equalsIgnoreCase("test")) {
-			test();
+		logger.info("Web information has been instantiated!");
+		
+		
+		if (prop.getProperty("mode.test").equalsIgnoreCase("true")) {
+			if ( prop.getProperty("mode.gui").equalsIgnoreCase("true")) {
+				TesterMainGUI gui = new TesterMainGUI();
+				try {
+					gui.main(args);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}	
+			}
 		} else {
 			try {
 				client = ClientFactory.getDefaultInstance();
 				client.setSystemListener(new ISystemListener() {
 
 					public void onStop(long arg0) {
+						logger.info("Client(" + arg0 + ") has been stopped.");
 						setPhase(null);
 						System.exit(0);
 					}
 
 					public void onStart(long arg0) {
+						logger.info("Client(" + arg0 + ") has been started.");
 						processId = arg0;
 					}
 
@@ -160,13 +174,15 @@ public class Main {
 
 			setPhase("Connection");
 			try {
-				client.connect(jnlpUrl, userName, password);
+				client.connect(prop.getProperty("account.jforex"), prop.getProperty("account.user"),
+						prop.getProperty("account.password"));
 			} catch (Exception e) {
-				logger.fatal("Cannot connect to " + jnlpUrl + "@" + userName + ":" + password, e);
+				logger.fatal(
+						"Cannot connect to " + prop.getProperty("account.jforex") + "@"
+								+ prop.getProperty("account.user"), e);
 				closing();
 				return;
 			}
-
 			// wait for it to connect
 			int i = 50; // wait max ten seconds
 			while (i > 0 && !client.isConnected()) {
@@ -180,7 +196,6 @@ public class Main {
 				}
 				i--;
 			}
-
 			// workaround for LoadNumberOfCandlesAction for JForex-API versions
 			// >
 			// 2.6.64
@@ -198,7 +213,6 @@ public class Main {
 			setPhase("Strategy starting");
 			try {
 				client.startStrategy(StateMachine.getInstance());
-
 			} catch (Exception e) {
 				logger.fatal("Cannot start strategy, possibly connection error or no strategy!", e);
 				closing();
@@ -219,26 +233,10 @@ public class Main {
 		return info.isMarketOpen(market);
 	}
 
-	public static void massDebug(Logger logger, String msg) {
-		if (msg.equalsIgnoreCase(lastDLog)) {
-			return;
-		}
-		lastDLog = msg;
-		logger.debug(msg);
-	}
-
-	public static void massInfo(Logger logger, String msg) {
-		if (msg.equalsIgnoreCase(lastILog)) {
-			return;
-		}
-		lastILog = msg;
-		logger.info(msg);
-	}
-
 	public static void sendMail(String subject, String body) throws RobotException {
-		logger.info("Mail \"" + subject + "\" has been sent to " + Main.MASTER);
+		logger.info("Mail \"" + subject + "\" has been sent to " + prop.getProperty("account.email"));
 		// Recipient's email ID needs to be mentioned.
-		String to = Main.MASTER;
+		String to = prop.getProperty("account.email");
 
 		// Sender's email ID needs to be mentioned
 		String from = "fxrobot@fnf.hu";
@@ -280,21 +278,8 @@ public class Main {
 		}
 	}
 
-	public static void test() {
-		String[] args = new String[2];
-		// args[0] = "/home/johnnym/git/forex-strategy/res/log4j.properties";
-		// args[1] = "test";
-
-		TesterMainGUI gui = new TesterMainGUI();
-		try {
-			gui.main(args);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
 	public static void printDetails(IOrder iOrder) {
+		logger.info("IOrder \"" + iOrder.getLabel() + "\" #" + iOrder.getId());
 		logger.debug("\tid:            " + iOrder.getId());
 		logger.debug("\tctime:         " + iOrder.getCreationTime());
 		logger.debug("\tcurrency:      " + iOrder.getInstrument());
@@ -410,7 +395,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 		logger.info("Connecting...");
 		// connect to the server using jnlp, user name and password
 		// connection is needed for data downloading
-		client.connect(Main.jnlpUrl, Main.userName, Main.password);
+		//client.connect(Main.jnlpUrl, Main.userName, "account.password");
 
 		// wait for it to connect
 		int i = 50; // wait max ten seconds

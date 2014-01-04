@@ -1,6 +1,5 @@
 package hu.fnf.devel.forex.utils;
 
-import hu.fnf.devel.forex.Main;
 import hu.fnf.devel.forex.StateMachine;
 
 import java.io.IOException;
@@ -79,7 +78,7 @@ public class WebInfo implements Info {
 			retriveThread.start();
 			retrieving = retriveThread.isAlive();
 		}
-		Main.massDebug(logger, "Until info download is finished false information will be returned.");
+		//Main.massDebug(logger, "Until info download is finished false information will be returned.");
 		return false;
 	}
 

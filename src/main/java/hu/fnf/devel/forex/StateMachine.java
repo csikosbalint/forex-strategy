@@ -1,7 +1,5 @@
 package hu.fnf.devel.forex;
 
-import hu.fnf.devel.forex.database.Order;
-import hu.fnf.devel.forex.database.Database;
 import hu.fnf.devel.forex.states.ExitState;
 import hu.fnf.devel.forex.states.MACDSample452State;
 import hu.fnf.devel.forex.states.PanicState;
@@ -16,7 +14,6 @@ import java.awt.Color;
 import java.awt.Font;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -32,8 +29,6 @@ import com.dukascopy.api.IChart;
 import com.dukascopy.api.IContext;
 import com.dukascopy.api.IEngine;
 import com.dukascopy.api.IEngine.OrderCommand;
-import com.dukascopy.api.IMessage.Reason;
-import com.dukascopy.api.IMessage.Type;
 import com.dukascopy.api.IMessage;
 import com.dukascopy.api.IOrder;
 import com.dukascopy.api.IStrategy;
@@ -370,7 +365,7 @@ public class StateMachine implements IStrategy {
 		 */
 		for (IOrder iterable : context.getEngine().getOrders()) {
 			if ( iterable.getLabel().contains("START") ) {
-				throw new RobotException("Robot is already running!");
+				throw new RobotException("Robot with label \"" +  iterable.getLabel()+ "\" is already running!");
 			}
 		}
 		
@@ -506,10 +501,7 @@ public class StateMachine implements IStrategy {
 			} else {
 				logger.debug(bestState.getName() + ": " + bestSignal.getValue());
 			}
-		} else {
-			Main.massInfo(logger, "Searching for promising state(s)...");
 		}
-
 	}
 
 	@Override

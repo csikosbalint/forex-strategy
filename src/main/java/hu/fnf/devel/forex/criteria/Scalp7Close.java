@@ -7,7 +7,6 @@ import com.dukascopy.api.ITick;
 import com.dukascopy.api.JFException;
 import com.dukascopy.api.OfferSide;
 
-import hu.fnf.devel.forex.Main;
 import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.utils.CloseCriterionDecorator;
 import hu.fnf.devel.forex.utils.Criterion;
@@ -93,10 +92,10 @@ public class Scalp7Close extends CloseCriterionDecorator {
 						- order.getCreationTime() > mins15) {
 																										// min
 					if (order.getProfitLossInUSD() < order.getCommissionInUSD() ) {
-						Main.massDebug(logger, "It is a long(10min) scalp but it is in a loss...waiting.");
+						//Main.massDebug(logger, "It is a long(10min) scalp but it is in a loss...waiting.");
 						return 0;
 					} else {
-						Main.massDebug(logger, "It is a long(15min) scalp. Closing it with profit!");
+						//Main.massDebug(logger, "It is a long(15min) scalp. Closing it with profit!");
 						return this.max;	
 					}
 				} else if (StateMachine.getInstance().getContext().getHistory().getLastTick(challenge.getInstrument())

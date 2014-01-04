@@ -7,7 +7,6 @@ import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
 import com.dukascopy.api.Period;
 
-import hu.fnf.devel.forex.Main;
 import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.utils.Criterion;
 import hu.fnf.devel.forex.utils.OpenCriterionDecorator;
@@ -46,7 +45,7 @@ public class OverTheWeekendCriterion extends OpenCriterionDecorator {
 		// no trade during weekend time
 		try {
 			if (context.getDataService().isOfflineTime(context.getHistory().getLastTick(instrument).getTime())) {
-				Main.massDebug(logger, "Over-weekend trade is not supported!");
+				//Main.massDebug(logger, "Over-weekend trade is not supported!");
 				if (context.getEngine().getOrders().size() != 0) {
 					logger.warn("It is not advides to have orders during weekend period.");
 					for (IOrder o : context.getEngine().getOrders()) {
