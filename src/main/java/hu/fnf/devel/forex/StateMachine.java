@@ -47,14 +47,14 @@ import com.dukascopy.api.drawings.IScreenLabelChartObject.Corner;
 public class StateMachine implements IStrategy {
 	private static final Logger logger = Logger.getLogger(StateMachine.class);
 
-	public static final int OPEN = 0;
-	public static final int CLOSE = 1;
-	public static final int TREND = 2;
-	public static final int CHAOS = 3;
+	public static final int OPEN = 1;
+	public static final int CLOSE = 2;
+	public static final int TREND = 3;
+	public static final int CHAOS = 4;
 	
-	public static final int ADD = 0;
-	public static final int UPDATE = 1;
-	public static final int REMOVE = 2;
+	public static final int ADD = 1;
+	public static final int UPDATE = 2;
+	public static final int REMOVE = 3;
 	
 	public static final double BRAVE_VALUE = 0.6;
 	private static final int maxOrderResubmitCount = 5;
@@ -68,7 +68,6 @@ public class StateMachine implements IStrategy {
 	private IContext context;
 	
 	private double 	startBalance;
-//	private long 	startTime;
 	private int		startID;
 
 	private Collection<IChart> charts = new ArrayList<IChart>();
@@ -232,7 +231,7 @@ public class StateMachine implements IStrategy {
 	}
 
 	public Period getPeriod(IOrder order) {
-		return Period.valueOf(Database.get(order.getCreationTime()).getPeriod());
+		return Period.valueOf(order.getLabel().split("AND")[1]);
 	}
 
 	public IContext getContext() {
@@ -269,8 +268,8 @@ public class StateMachine implements IStrategy {
 				logger.info("Not the same next and recognized: " + ret.getName() + "/" + nextState.getName());
 			}
 
-			Order order = Database.get(iOrder.getCreationTime());
-			Database.add(order);
+//			Order order = Database.get(iOrder.getCreationTime());
+//			Database.add(order);
 			break;
 		default:
 			/*
@@ -329,7 +328,9 @@ public class StateMachine implements IStrategy {
 				instruments.add(i);
 			}
 		}
-
+		for (Instrument instrument: instruments ) {
+			logger.info("\t" + instrument.name());
+		}
 		context.setSubscribedInstruments(instruments);
 
 		/*
@@ -408,6 +409,7 @@ public class StateMachine implements IStrategy {
 //		} catch ( RobotException e) {
 //			logger.error("Cannot send mail!", e);
 //		}
+		logger.info("start ID:              " + startID);
 		logger.info("mail send:              OK");
 		logger.info("account id:		    " + context.getAccount().getAccountId());
 		logger.info("account state:         " + context.getAccount().getAccountState());

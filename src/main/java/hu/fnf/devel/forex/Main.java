@@ -63,10 +63,10 @@ public class Main {
 	 * login variables
 	 */
 	public final static String jnlpUrl	= "https://eu-demo.dukascopy.com/fo/platform/jForex";
-	//public final static String userName = "DEMO10037kPsFrEU";
-	//public final static String password = "kPsFr";
-	public final static String userName = "DEMO10037YgwSCEU";
-	public final static String password = "YgwSC";
+	public final static String userName = "DEMO10037kPsFrEU";
+	public final static String password = "kPsFr";
+//	public final static String userName = "DEMO10037YgwSCEU";
+//	public final static String password = "YgwSC";
 	public final static String MASTER 	= "johnnym@fnf.hu";
 
 	/**

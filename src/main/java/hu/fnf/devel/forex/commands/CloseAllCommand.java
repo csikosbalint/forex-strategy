@@ -14,16 +14,12 @@ public class CloseAllCommand implements Command {
 	public void execute() throws JFException {
 		if (StateMachine.getInstance().getContext().getEngine().getOrders().size() != 0) {
 			for (IOrder o : StateMachine.getInstance().getContext().getEngine().getOrders()) {
-				if (o.getState() == IOrder.State.FILLED) {
+				if ( !o.getLabel().contains("START") ) {
 					logger.info("Order #" + o.getId() + " closing with " + o.getProfitLossInUSD() + "$ / "
 							+ o.getProfitLossInPips());
-				} else {
-					logger.error("There are orders which are not FILLED!");
-					return;
+					o.close();
 				}
 			}
-			StateMachine.getInstance().getContext().getEngine()
-					.closeOrders(StateMachine.getInstance().getContext().getEngine().getOrders());
 		}
 	}
 

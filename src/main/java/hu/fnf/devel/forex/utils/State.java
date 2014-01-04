@@ -1,15 +1,6 @@
 package hu.fnf.devel.forex.utils;
 
-import hu.fnf.devel.forex.StateMachine;
-import hu.fnf.devel.forex.commands.CloseAllCommand;
 import hu.fnf.devel.forex.commands.Command;
-import hu.fnf.devel.forex.commands.OpenCommand;
-import hu.fnf.devel.forex.states.ExitState;
-import hu.fnf.devel.forex.states.MACDSample452State;
-import hu.fnf.devel.forex.states.PanicState;
-import hu.fnf.devel.forex.states.ScalpHolder7State;
-import hu.fnf.devel.forex.states.SignalSeekerState;
-import hu.fnf.devel.forex.states.ThreeLittlePigsState;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -45,21 +36,14 @@ public abstract class State {
 	public abstract double getAmount();
 
 	public void prepareCommands(Signal signal) {
-		switch (signal.getTag()) {
-		case StateMachine.OPEN:
-			commands.add(new OpenCommand(signal));
-			break;
-		case StateMachine.CLOSE:
-			commands.add(new CloseAllCommand());
-		default:
-			logger.warn("No command(s) associated with this signal.");
-			break;
-		}
+		commands.add(signal.getCommand());
+		logger.info("Command " + signal.getCommand().getClass().getSimpleName() + " is prepared.");
 	}
 
 	public boolean executeCommands() {
 		for (Command c : commands) {
 			try {
+				logger.info("Command " + c.getClass().getSimpleName() + " is executing...");
 				c.execute();
 			} catch (JFException e) {
 				// TODO Auto-generated catch block
@@ -73,6 +57,9 @@ public abstract class State {
 
 	public boolean onArriving() {
 		setPanic(false);
+		this.commands = new HashSet<Command>();
+		this.instruments = new HashSet<Instrument>();
+		this.periods = new HashSet<Period>();
 		return true;
 	}
 

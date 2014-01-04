@@ -1,5 +1,7 @@
 package hu.fnf.devel.forex.utils;
 
+import hu.fnf.devel.forex.commands.Command;
+
 import com.dukascopy.api.IEngine.OrderCommand;
 import com.dukascopy.api.Instrument;
 import com.dukascopy.api.Period;
@@ -12,6 +14,15 @@ public class Signal {
 	private double 		amount;
 	private int 		tag;
 	private Period		period;
+	private Command		command;
+	
+	public void setCommand(Command command) {
+		this.command = command;
+	}
+	
+	public Command getCommand() {
+		return command;
+	}
 	
 	public Signal() {
 		// TODO Auto-generated constructor stub
