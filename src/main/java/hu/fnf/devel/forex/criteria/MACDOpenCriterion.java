@@ -1,6 +1,7 @@
 package hu.fnf.devel.forex.criteria;
 
 import hu.fnf.devel.forex.StateMachine;
+import hu.fnf.devel.forex.commands.OpenCommand;
 import hu.fnf.devel.forex.utils.Criterion;
 import hu.fnf.devel.forex.utils.OpenCriterionDecorator;
 import hu.fnf.devel.forex.utils.Signal;
@@ -13,7 +14,7 @@ import com.dukascopy.api.JFException;
 import com.dukascopy.api.OfferSide;
 import com.dukascopy.api.Period;
 
-public class MACDOpen extends OpenCriterionDecorator {
+public class MACDOpenCriterion extends OpenCriterionDecorator {
 	/*
 	 * config
 	 */
@@ -23,7 +24,7 @@ public class MACDOpen extends OpenCriterionDecorator {
 	int b = 26;
 	int c = 9;
 
-	public MACDOpen(Criterion criterion) {
+	public MACDOpenCriterion(Criterion criterion) {
 		super(criterion);
 	}
 
@@ -58,11 +59,12 @@ public class MACDOpen extends OpenCriterionDecorator {
 		if (MacdCurrent[0] < 0 && MacdPrevious[0] > MacdPrevPrev[0]
 				&& Math.signum(MacdCurrent[2]) != Math.signum(MacdPrevious[2]) && SignalPrevious < SignalPrevPrev) {
 			if (MacdCurrent[0] < -1 * (MACDOpenLevel * (challenge.getInstrument().getPipValue()))) {
+				logger.info("MACDCur  < 0         :\t" + MacdCurrent[0] + " < " + "0");
+				logger.info("MACDPre  > MACDPrePre:\t" + MacdPrevious[0] + " > " + MacdPrevPrev[0]);
+				logger.info("MACDSigPre < MACDSigPrePre:\t" + SignalPrevious + " < " + SignalPrevPrev);
+				logger.info("sign(MACDHistCur) != sign(MACDHistPre)");
 				challenge.setType(OrderCommand.BUY);
-				logger.debug("MACDCur  < 0         :\t" + MacdCurrent[0] + " < " + "0");
-				logger.debug("MACDPre  > MACDPrePre:\t" + MacdPrevious[0] + " > " + MacdPrevPrev[0]);
-				logger.debug("MACDSigPre < MACDSigPrePre:\t" + SignalPrevious + " < " + SignalPrevPrev);
-				logger.debug("sign(MACDHistCur) != sign(MACDHistPre)");
+				challenge.setCommand(new OpenCommand(challenge));
 				return this.max;
 			}
 		}
@@ -90,11 +92,12 @@ public class MACDOpen extends OpenCriterionDecorator {
 		if (MacdCurrent[0] > 0 && MacdPrevious[0] < MacdPrevPrev[0]
 				&& Math.signum(MacdCurrent[2]) != Math.signum(MacdPrevious[2]) && SignalPrevious > SignalPrevPrev) {
 			if (MacdCurrent[0] > (MACDOpenLevel * (challenge.getInstrument().getPipValue()))) {
+				logger.info("MACDCur  > 0         :\t" + MacdCurrent[0] + " > " + "0");
+				logger.info("MACDPre  < MACDPrePre:\t" + MacdPrevious[0] + " < " + MacdPrevPrev[0]);
+				logger.info("MACDSigPre > MACDSigPrePre:\t" + SignalPrevious + " > " + SignalPrevPrev);
+				logger.info("sign(MACDHistCur) != sign(MACDHistPre)");
 				challenge.setType(OrderCommand.SELL);
-				logger.debug("MACDCur  > 0         :\t" + MacdCurrent[0] + " > " + "0");
-				logger.debug("MACDPre  < MACDPrePre:\t" + MacdPrevious[0] + " < " + MacdPrevPrev[0]);
-				logger.debug("MACDSigPre > MACDSigPrePre:\t" + SignalPrevious + " > " + SignalPrevPrev);
-				logger.debug("sign(MACDHistCur) != sign(MACDHistPre)");
+				challenge.setCommand(new OpenCommand(challenge));
 				return this.max;
 			}
 		}

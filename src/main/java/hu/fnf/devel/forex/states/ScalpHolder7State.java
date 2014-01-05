@@ -1,16 +1,13 @@
 package hu.fnf.devel.forex.states;
 
 import hu.fnf.devel.forex.StateMachine;
-import hu.fnf.devel.forex.criteria.MoneyManagement;
+import hu.fnf.devel.forex.criteria.MoneyManagementExclusion;
 import hu.fnf.devel.forex.criteria.Scalp7Close;
 import hu.fnf.devel.forex.criteria.Scalp7Open;
 import hu.fnf.devel.forex.utils.CloseCriterion;
 import hu.fnf.devel.forex.utils.OpenCriterion;
 import hu.fnf.devel.forex.utils.Signal;
 import hu.fnf.devel.forex.utils.State;
-
-import java.util.HashSet;
-import java.util.Set;
 
 import com.dukascopy.api.IBar;
 import com.dukascopy.api.ITick;
@@ -19,10 +16,20 @@ import com.dukascopy.api.JFException;
 import com.dukascopy.api.Period;
 
 public class ScalpHolder7State extends State {
-
+	/*
+	 * singleton
+	 */
 	private final double amount = 0.01;
+	private static ScalpHolder7State instance;
 
-	public ScalpHolder7State() {
+	public synchronized static ScalpHolder7State getInstance() {
+		if (instance == null) {
+			instance = new ScalpHolder7State();
+		}
+		return instance;
+	}
+
+	private ScalpHolder7State() {
 		super("ScalpHolder7State");
 		/*
 		 * config
@@ -42,7 +49,7 @@ public class ScalpHolder7State extends State {
 		open = new Scalp7Open(open);
 
 		close = new CloseCriterion();
-		close = new MoneyManagement(close);
+		close = new MoneyManagementExclusion(close);
 		close = new Scalp7Close(close);
 	}
 	
@@ -70,13 +77,5 @@ public class ScalpHolder7State extends State {
 	@Override
 	public double getAmount() {
 		return this.amount;
-	}
-
-	@Override
-	public Set<State> getNextStates() {
-		Set<State> nextstates = new HashSet<State>();
-		nextstates.add(StateMachine.getStateInstance("SignalSeekerState"));
-		nextstates.add(StateMachine.getStateInstance("PanicState"));
-		return nextstates;
 	}
 }

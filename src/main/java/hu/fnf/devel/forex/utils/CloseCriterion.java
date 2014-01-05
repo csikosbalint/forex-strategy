@@ -9,13 +9,12 @@ import com.dukascopy.api.Period;
 
 public class CloseCriterion implements Criterion {
 	protected static final Logger logger = Logger.getLogger(CloseCriterion.class);
-	// TODO: this is an error! a field variable but many method uses!!
+	// TODO: this is an error! there is a field variable here and many method uses it!!
 	private boolean excluded = false;
 
 	@Override
 	public void setExclusion() {
 		this.excluded = true;
-
 	}
 
 	@Override
@@ -30,15 +29,11 @@ public class CloseCriterion implements Criterion {
 
 	@Override
 	public double calcProbability(Signal challenge, ITick tick, State actual) {
-		
 		return 0;
 	}
 
 	@Override
 	public double calcProbability(Signal challenge, Period period, IBar askBar, IBar bidBar, State actual) {
-		if ( period.equals(Period.ONE_HOUR ) ) {
-			logger.info("Searching for promising state(s)...");
-		}
 		return 0;
 	}
 	

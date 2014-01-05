@@ -28,7 +28,7 @@ public abstract class OpenCriterionDecorator extends CriterionDecorator {
 
 	@Override
 	public double calcProbability(Signal challenge, Period period, IBar askBar, IBar bidBar, State actual) {
-		logger.info("Searching for position...(" + period.name() + "/" + challenge.getInstrument().name() + ")");
+		logger.debug("Searching for position...(" + period.name() + "@" + challenge.getInstrument().name() + ")");
 		double ret = this.criterion.calcProbability(challenge, period, askBar, bidBar, actual);
 		if (isExcluded()) {
 			return 0;

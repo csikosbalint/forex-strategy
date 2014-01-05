@@ -1,7 +1,6 @@
 package hu.fnf.devel.forex.states;
 
-import java.util.HashSet;
-import java.util.Set;
+import org.apache.log4j.Logger;
 
 import com.dukascopy.api.IBar;
 import com.dukascopy.api.IOrder;
@@ -17,8 +16,20 @@ import hu.fnf.devel.forex.utils.Signal;
 import hu.fnf.devel.forex.utils.State;
 
 public class PanicState extends State {
+	private static final Logger logger = Logger.getLogger(PanicState.class);
+	/*
+	 * singleton
+	 */
+	private static PanicState instance;
 
-	public PanicState() {
+	public synchronized static PanicState getInstance() {
+		if (instance == null) {
+			instance = new PanicState();
+		}
+		return instance;
+	}
+
+	private PanicState() {
 		super("PanicState");
 	}
 	
@@ -76,13 +87,6 @@ public class PanicState extends State {
 			throws JFException {
 		// TODO Auto-generated method stub
 		return null;
-	}
-
-	@Override
-	public Set<State> getNextStates() {
-		Set<State> nextstates = new HashSet<State>();
-		nextstates.add(StateMachine.getStateInstance("ExitState"));
-		return nextstates;
 	}
 
 	@Override

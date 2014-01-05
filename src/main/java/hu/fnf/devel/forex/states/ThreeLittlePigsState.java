@@ -1,8 +1,5 @@
 package hu.fnf.devel.forex.states;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import com.dukascopy.api.IBar;
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Instrument;
@@ -10,8 +7,8 @@ import com.dukascopy.api.JFException;
 import com.dukascopy.api.Period;
 
 import hu.fnf.devel.forex.StateMachine;
-import hu.fnf.devel.forex.criteria.MarketCriterion;
-import hu.fnf.devel.forex.criteria.MoneyManagement;
+import hu.fnf.devel.forex.criteria.MarketOpenTimeExclusion;
+import hu.fnf.devel.forex.criteria.MoneyManagementExclusion;
 import hu.fnf.devel.forex.criteria.ThreePigsClose;
 import hu.fnf.devel.forex.criteria.ThreePigsOpen;
 import hu.fnf.devel.forex.utils.CloseCriterion;
@@ -23,9 +20,21 @@ public class ThreeLittlePigsState extends State {
 	/*
 	 * http://forums.babypips.com/free-forex-trading-systems/55216-3-little-pigs-trading-system.html
 	 */
-	private final double amount = 0.1; 
+	/*
+	 * singleton
+	 */
+	private final double amount = 0.1;
+	private static ThreeLittlePigsState instance;
 
-	public ThreeLittlePigsState() {
+	public synchronized static ThreeLittlePigsState getInstance() {
+		if (instance == null) {
+			instance = new ThreeLittlePigsState();
+		}
+		return instance;
+	}
+
+
+	private ThreeLittlePigsState() {
 		super("ThreeLittlePigsState");
 		/*
 		 * config
@@ -38,11 +47,11 @@ public class ThreeLittlePigsState extends State {
 		this.periods	.add(Period.FOUR_HOURS);
 
 		open = new OpenCriterion();
-		open = new MarketCriterion(open);
+		open = new MarketOpenTimeExclusion(open);
 		open = new ThreePigsOpen(open);
 
 		close = new CloseCriterion();
-		close = new MoneyManagement(close);
+		close = new MoneyManagementExclusion(close);
 		close = new ThreePigsClose(close);
 	}
 
@@ -68,14 +77,6 @@ public class ThreeLittlePigsState extends State {
 			return challenge;
 		}
 		return null;
-	}
-
-	@Override
-	public Set<State> getNextStates() {
-		Set<State> nextstates = new HashSet<State>();
-		nextstates.add(new SignalSeekerState());
-		nextstates.add(new PanicState());
-		return nextstates;
 	}
 
 	@Override

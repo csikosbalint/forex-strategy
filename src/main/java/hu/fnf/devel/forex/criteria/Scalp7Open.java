@@ -1,6 +1,7 @@
 package hu.fnf.devel.forex.criteria;
 
 import hu.fnf.devel.forex.StateMachine;
+import hu.fnf.devel.forex.commands.OpenCommand;
 import hu.fnf.devel.forex.utils.Criterion;
 import hu.fnf.devel.forex.utils.OpenCriterionDecorator;
 import hu.fnf.devel.forex.utils.Signal;
@@ -79,6 +80,7 @@ public class Scalp7Open extends OpenCriterionDecorator {
 				logger.info("it is a good sign to buy " + challenge.getInstrument().name());
 				logger.debug("\tred: " + red[2] + "\t>\task: " + tick.getAsk());
 				challenge.setType(OrderCommand.BUY);
+				challenge.setCommand(new OpenCommand(challenge));
 				return this.max;
 			}
 		} catch (JFException e) {
@@ -99,6 +101,7 @@ public class Scalp7Open extends OpenCriterionDecorator {
 				logger.info("it is a good sign to sell " + challenge.getInstrument().name());
 				logger.debug("\tred: " + red[0] + " < ask: " + tick.getBid());
 				challenge.setType(OrderCommand.SELL);
+				challenge.setCommand(new OpenCommand(challenge));
 				return this.max;
 			}
 		} catch (JFException e) {

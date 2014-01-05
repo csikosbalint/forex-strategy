@@ -1,19 +1,14 @@
 package hu.fnf.devel.forex.states;
 
 import hu.fnf.devel.forex.StateMachine;
-import hu.fnf.devel.forex.criteria.BadLuckPanic;
-import hu.fnf.devel.forex.criteria.MACDClose;
-import hu.fnf.devel.forex.criteria.MACDOpen;
-import hu.fnf.devel.forex.criteria.MarketCriterion;
-import hu.fnf.devel.forex.criteria.MoneyManagement;
-import hu.fnf.devel.forex.criteria.TrendADXCriterion;
-import hu.fnf.devel.forex.utils.CloseCriterion;
-import hu.fnf.devel.forex.utils.OpenCriterion;
+import hu.fnf.devel.forex.criteria.BadLuckPanicExclusion;
+import hu.fnf.devel.forex.criteria.MACDCloseCriterion;
+import hu.fnf.devel.forex.criteria.MACDOpenCriterion;
+import hu.fnf.devel.forex.criteria.MarketOpenTimeExclusion;
+import hu.fnf.devel.forex.criteria.MoneyManagementExclusion;
+import hu.fnf.devel.forex.criteria.TrendADXExclusion;
 import hu.fnf.devel.forex.utils.Signal;
 import hu.fnf.devel.forex.utils.State;
-
-import java.util.HashSet;
-import java.util.Set;
 
 import com.dukascopy.api.IBar;
 import com.dukascopy.api.ITick;
@@ -23,13 +18,21 @@ import com.dukascopy.api.Period;
 
 public class MACDSample452State extends State {
 	/*
-	 * 
+	 * singleton
 	 */
 	private final double amount = 0.01;
+	private static MACDSample452State instance;
+
+	public synchronized static MACDSample452State getInstance() {
+		if (instance == null) {
+			instance = new MACDSample452State();
+		}
+		return instance;
+	}
 
 	// private int MATrendPeriod = 26;
 
-	public MACDSample452State() {
+	private MACDSample452State() {
 		super("MACDSample452State");
 		/*
 		 * config
@@ -39,17 +42,15 @@ public class MACDSample452State extends State {
 
 		this.periods.add(Period.ONE_HOUR);
 
-		open = new OpenCriterion();
-		open = new MarketCriterion(open);
+		open = new MarketOpenTimeExclusion(open);
 		int days = 3;
 		int trades = 2;
-		open = new BadLuckPanic(open, days, trades);
-		open = new TrendADXCriterion(open, StateMachine.TREND);
-		open = new MACDOpen(open);
+		open = new BadLuckPanicExclusion(open, days, trades);
+		open = new TrendADXExclusion(open, StateMachine.TREND);
+		open = new MACDOpenCriterion(open);
 
-		close = new CloseCriterion();
-		close = new MoneyManagement(close);
-		close = new MACDClose(close);
+		close = new MoneyManagementExclusion(close);
+		close = new MACDCloseCriterion(close);
 
 	}
 
@@ -88,13 +89,5 @@ public class MACDSample452State extends State {
 	@Override
 	public double getAmount() {
 		return this.amount;
-	}
-
-	@Override
-	public Set<State> getNextStates() {
-		Set<State> nextstates = new HashSet<State>();
-		nextstates.add(StateMachine.getStateInstance("SignalSeekerState"));
-		nextstates.add(StateMachine.getStateInstance("PanicState"));
-		return nextstates;
 	}
 }

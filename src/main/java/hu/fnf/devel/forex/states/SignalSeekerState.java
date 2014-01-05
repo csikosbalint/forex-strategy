@@ -6,7 +6,8 @@ import hu.fnf.devel.forex.utils.Signal;
 import hu.fnf.devel.forex.utils.State;
 
 import java.util.HashSet;
-import java.util.Set;
+
+import org.apache.log4j.Logger;
 
 import com.dukascopy.api.IBar;
 import com.dukascopy.api.ITick;
@@ -15,8 +16,20 @@ import com.dukascopy.api.JFException;
 import com.dukascopy.api.Period;
 
 public class SignalSeekerState extends State {
+	private static final Logger logger = Logger.getLogger(SignalSeekerState.class);
+	/*
+	 * singleton
+	 */
+	private static SignalSeekerState instance;
 
-	public SignalSeekerState() {
+	public synchronized static SignalSeekerState getInstance() {
+		if (instance == null) {
+			instance = new SignalSeekerState();
+		}
+		return instance;
+	}
+
+	private SignalSeekerState() {
 		super("SignalSeekerState");
 		/*
 		 * config
@@ -29,20 +42,6 @@ public class SignalSeekerState extends State {
 	}
 
 	@Override
-	public boolean onArriving() {
-		return true;
-	}
-
-	@Override
-	public boolean onLeaving() {
-		// removing references
-		this.instruments = null;
-		this.periods = null;
-		this.signal = null;
-		return true;
-	}
-
-	@Override
 	public Signal getSignal(Instrument instrument, ITick tick, State actual) throws JFException {
 		if (actual.getInstruments().contains(instrument)) {
 			if (StateMachine.getInstance().getContext().getEngine().getOrders().size() > 0
@@ -51,7 +50,6 @@ public class SignalSeekerState extends State {
 				Signal challenge = new Signal(instrument, StateMachine.getInstance().getContext().getEngine()
 						.getOrders().get(0).getAmount(), StateMachine.CLOSE);
 				challenge.setCommand(new CloseCommand(actual));
-
 				double max = actual.getClose().getMax();
 				double act = actual.getClose().calcProbability(challenge, tick, actual);
 				challenge.setValue(act / max);
@@ -65,17 +63,6 @@ public class SignalSeekerState extends State {
 	public Signal getSignal(Instrument instrument, Period period, IBar askBar, IBar bidBar, State actual)
 			throws JFException {
 		return null;
-	}
-
-	@Override
-	public Set<State> getNextStates() {
-		Set<State> nextstates = new HashSet<State>();
-		
-		nextstates.add(StateMachine.getStateInstance("ScalpHolder7State"));
-		nextstates.add(StateMachine.getStateInstance("MACDSample452State"));
-		//nextstates.add(StateMachine.valueOf("ThreeLittlePigsState"));
-		nextstates.add(StateMachine.getStateInstance("PanicState"));
-		return nextstates;
 	}
 
 	@Override

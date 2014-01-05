@@ -6,12 +6,16 @@ import hu.fnf.devel.forex.utils.Criterion;
 import hu.fnf.devel.forex.utils.Signal;
 import hu.fnf.devel.forex.utils.State;
 
+import com.dukascopy.api.IEngine;
 import com.dukascopy.api.IIndicators;
+import com.dukascopy.api.IOrder;
 import com.dukascopy.api.ITick;
+import com.dukascopy.api.Instrument;
 import com.dukascopy.api.JFException;
 import com.dukascopy.api.OfferSide;
+import com.dukascopy.api.Period;
 
-public class MACDClose extends CloseCriterionDecorator {
+public class MACDCloseCriterion extends CloseCriterionDecorator {
 	/*
 	 * config
 	 */
@@ -20,25 +24,41 @@ public class MACDClose extends CloseCriterionDecorator {
 	int b = 26;
 	int c = 9;
 
-	public MACDClose(Criterion criterion) {
+	public MACDCloseCriterion(Criterion criterion) {
 		super(criterion);
 	}
 
 	@Override
 	protected double calc(Signal challenge, ITick tick, State actual) {
-
+		int c = 2; // the START#ID order and this
+		if ( StateMachine.getInstance().getContext().getEngine().getType().equals(IEngine.Type.TEST) ) {
+			c--;
+		}
+		IOrder order = null;
 		try {
-			if (StateMachine.getInstance().getContext().getEngine().getOrders().size() < 2) {
+			if (StateMachine.getInstance().getContext().getEngine().getOrders().size() < c) {
 				return 0;
+			}
+			for (IOrder oIOrder : StateMachine.getInstance().getContext().getEngine().getOrders() ) {
+				if ( oIOrder.getLabel().split("AND")[0].equalsIgnoreCase("MACDSample452State") ) {
+					order = oIOrder;
+				}
 			}
 		} catch (JFException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-
+		if ( order == null ) {
+			// not our order
+			return 0;
+		}
+		
 		IIndicators indicators = StateMachine.getInstance().getContext().getIndicators();
 		try {
-			if (StateMachine.getInstance().getContext().getEngine().getOrders().get(0).isLong()) {
+			Period p = Period.valueOf(order.getLabel().split("AND")[1]);
+			Instrument i = order.getInstrument();
+
+			if (order.isLong()) {
 				/*
 				 * long Long exit – by execution of the take profit limit, by
 				 * execution of the trailing stop or when MACD crosses its
@@ -53,12 +73,9 @@ public class MACDClose extends CloseCriterionDecorator {
 				double SignalPrevPrev;
 
 				try {
-					MacdCurrent = indicators.macd(challenge.getInstrument(), challenge.getPeriod(), OfferSide.BID,
-							IIndicators.AppliedPrice.CLOSE, a, b, c, 0);
-					MacdPrevious = indicators.macd(challenge.getInstrument(), challenge.getPeriod(), OfferSide.BID,
-							IIndicators.AppliedPrice.CLOSE, a, b, c, 1);
-					MacdPrevPrev = indicators.macd(challenge.getInstrument(), challenge.getPeriod(), OfferSide.BID,
-							IIndicators.AppliedPrice.CLOSE, a, b, c, 2);
+					MacdCurrent  = indicators.macd(i, p, OfferSide.BID, IIndicators.AppliedPrice.CLOSE, a, b, c, 0);
+					MacdPrevious = indicators.macd(i, p, OfferSide.BID, IIndicators.AppliedPrice.CLOSE, a, b, c, 1);
+					MacdPrevPrev = indicators.macd(i, p, OfferSide.BID, IIndicators.AppliedPrice.CLOSE, a, b, c, 2);
 
 					SignalCurrent = MacdCurrent[1];
 					SignalPrevious = MacdPrevious[1];
@@ -85,13 +102,9 @@ public class MACDClose extends CloseCriterionDecorator {
 				double SignalPrevious;
 				double SignalPrevPrev;
 				try {
-					// iMACD(NULL,0,12,26,9,PRICE_CLOSE,MODE_MAIN,0);
-					MacdCurrent = indicators.macd(challenge.getInstrument(), challenge.getPeriod(), OfferSide.BID,
-							IIndicators.AppliedPrice.CLOSE, a, b, c, 0);
-					MacdPrevious = indicators.macd(challenge.getInstrument(), challenge.getPeriod(), OfferSide.BID,
-							IIndicators.AppliedPrice.CLOSE, a, b, c, 1);
-					MacdPrevPrev = indicators.macd(challenge.getInstrument(), challenge.getPeriod(), OfferSide.BID,
-							IIndicators.AppliedPrice.CLOSE, a, b, c, 2);
+					MacdCurrent = indicators.macd(i, p, OfferSide.BID, IIndicators.AppliedPrice.CLOSE, a, b, c, 0);
+					MacdPrevious = indicators.macd(i, p, OfferSide.BID, IIndicators.AppliedPrice.CLOSE, a, b, c, 1);
+					MacdPrevPrev = indicators.macd(i, p, OfferSide.BID, IIndicators.AppliedPrice.CLOSE, a, b, c, 2);
 
 					SignalCurrent = MacdCurrent[1];
 					SignalPrevious = MacdPrevious[1];

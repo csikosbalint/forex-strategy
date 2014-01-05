@@ -1,9 +1,7 @@
 package hu.fnf.devel.forex;
 
-import hu.fnf.devel.forex.states.SignalSeekerState;
 import hu.fnf.devel.forex.utils.Info;
 import hu.fnf.devel.forex.utils.RobotException;
-import hu.fnf.devel.forex.utils.State;
 import hu.fnf.devel.forex.utils.WebInfo;
 
 import java.awt.Dimension;
@@ -16,10 +14,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.Future;
 
@@ -33,22 +29,20 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
 import com.dukascopy.api.DataType;
-import com.dukascopy.api.Filter;
 import com.dukascopy.api.IChart;
 import com.dukascopy.api.IOrder;
 import com.dukascopy.api.Instrument;
 import com.dukascopy.api.LoadingProgressListener;
-import com.dukascopy.api.OfferSide;
 import com.dukascopy.api.Period;
 import com.dukascopy.api.feed.FeedDescriptor;
 import com.dukascopy.api.feed.IFeedDescriptor;
 import com.dukascopy.api.system.ClientFactory;
 import com.dukascopy.api.system.IClient;
+import com.dukascopy.api.system.IStrategyExceptionHandler;
 import com.dukascopy.api.system.ISystemListener;
 import com.dukascopy.api.system.ITesterClient;
 import com.dukascopy.api.system.ITesterClient.DataLoadingMethod;
@@ -64,7 +58,6 @@ public class Main {
 	 * global variables
 	 */
 	private static final Logger logger = Logger.getLogger(Main.class);
-
 	private static IClient client;
 	private static long processId;
 	private static Info info;
@@ -87,6 +80,13 @@ public class Main {
 	public static String getPhase() {
 		return phase + " ";
 	}
+	
+	public static String getProperty(String key) {
+		if ( key.contains("assword") ) {
+			return null;
+		}
+		return prop.getProperty(key);
+	}
 
 	public static void main(String[] args) {
 		/*
@@ -95,7 +95,7 @@ public class Main {
 		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 			public void run() {
 				Main.setPhase("Interrupted");
-				if ( client != null && processId != 0 ) {
+				if (client != null && processId != 0) {
 					client.stopStrategy(processId);
 				}
 				logger.info("------------------------- Done. ----------------------------");
@@ -117,109 +117,232 @@ public class Main {
 		}
 		logger.info("Using config file.");
 		for (Object key : prop.keySet()) {
-			if ( key.toString().contains("assword") ||
-					key.toString().contains("log4j")) {
+			if (key.toString().contains("assword") || key.toString().contains("log4j")) {
 				continue;
 			}
 			logger.info("\t" + key.toString() + "\t=\t" + prop.get(key));
 		}
 
-		logger.info("--- Forex robot written by johnnym");
-		logger.info("--- Version: 1.0@" + "VERSION"); // VERSION is replaced by build.sh
-		logger.info("--- Account: " + prop.getProperty("account.user"));
+		logger.info("Forex robot written by johnnym");
+		logger.info("Version: 1.0@" + "VERSION"); // VERSION is replaced by
+														// build.sh
+		logger.info("Account: " + prop.getProperty("account.user"));
 		setPhase("Initalization");
+		/*
+		 * init web data cache
+		 */
 		info = new WebInfo();
-		logger.info("Web information has been instantiated!");
-		
-		
+		/*
+		 * LIVE, DEMO, TEST mode
+		 */
 		if (prop.getProperty("mode.test").equalsIgnoreCase("true")) {
-			if ( prop.getProperty("mode.gui").equalsIgnoreCase("true")) {
-				TesterMainGUI gui = new TesterMainGUI();
-				try {
-					gui.main(args);
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}	
+			/*
+			 * tester instance
+			 */
+			try {
+				client = TesterFactory.getDefaultInstance();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			/*
+			 * subscribe
+			 */
+			StateMachine.getInstance().subscribe(client);
+			/*
+			 * connect client
+			 */
+			connectClient();
+			/*
+			 * tester initialization
+			 */
+			((ITesterClient)client).setInitialDeposit(Instrument.EURUSD.getSecondaryCurrency(), 500);
+			logger.info("ITesterClient client has been initalized with deposit " + 500 + " USD");
+			final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+			dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+			try {
+				Date dateFrom = dateFormat.parse(prop.getProperty("mode.test.from"));
+				Date dateTo = dateFormat.parse(prop.getProperty("mode.test.till"));
+				
+				((ITesterClient) client).setDataInterval(DataLoadingMethod.TICKS_WITH_TIME_INTERVAL, dateFrom.getTime(),
+						dateTo.getTime());
+				// client.setDataInterval(Period.FIFTEEN_MINS, OfferSide.BID,
+				// InterpolationMethod.CLOSE_TICK, dateFrom.getTime(),
+				// dateTo.getTime());
+				// load data
+				logger.info("Downloading data");
+				Future<?> future = ((ITesterClient) client).downloadData(null);
+				// wait for downloading to complete
+				future.get();
+			} catch (Exception e) {
+				logger.fatal("Cannot retreive data for testing!",e);
+				System.exit(-1);
 			}
 		} else {
+			/*
+			 * live/demo
+			 */
 			try {
 				client = ClientFactory.getDefaultInstance();
-				client.setSystemListener(new ISystemListener() {
-
-					public void onStop(long arg0) {
-						logger.info("Client(" + arg0 + ") has been stopped.");
-						setPhase(null);
-						System.exit(0);
-					}
-
-					public void onStart(long arg0) {
-						logger.info("Client(" + arg0 + ") has been started.");
-						processId = arg0;
-					}
-
-					public void onDisconnect() {
-						logger.info("Client has been disconnected.Trying to reconnect...");
-						client.reconnect();
-					}
-
-					public void onConnect() {
-						logger.info("Client has been connected...");
-					}
-				});
 			} catch (Exception e) {
 				logger.fatal("Cannot instanciate client!", e);
 				return;
 			}
-
-			setPhase("Connection");
-			try {
-				client.connect(prop.getProperty("account.jforex"), prop.getProperty("account.user"),
-						prop.getProperty("account.password"));
-			} catch (Exception e) {
-				logger.fatal(
-						"Cannot connect to " + prop.getProperty("account.jforex") + "@"
-								+ prop.getProperty("account.user"), e);
-				closing();
-				return;
-			}
-			// wait for it to connect
-			int i = 50; // wait max ten seconds
-			while (i > 0 && !client.isConnected()) {
-				logger.debug("waiting for connection ...");
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {
-					logger.fatal("Connection process has been aborted!", e);
-					closing();
-					return;
-				}
-				i--;
-			}
-			// workaround for LoadNumberOfCandlesAction for JForex-API versions
-			// >
-			// 2.6.64
-			try {
-				int ms = 5000;
-				logger.info("Wainting " + ms + "ms for candles to load.");
-				logger.debug("workaround: JForex-API versions 2.6.64.");
-				Thread.sleep(ms);
-			} catch (InterruptedException e) {
-				logger.error(
-						"Workaround for LoadNumberOfCandlesAction for JForex-API versions 2.6.64 has been aborted.", e);
-			}
-			logger.info("Number of candles loaded.");
-
-			setPhase("Strategy starting");
-			try {
-				client.startStrategy(StateMachine.getInstance());
-			} catch (Exception e) {
-				logger.fatal("Cannot start strategy, possibly connection error or no strategy!", e);
-				closing();
-				return;
-			}
-			setPhase("Running");
 		}
+		client.setSystemListener(new ISystemListener() {
+
+			public void onStop(long arg0) {
+				logger.info("Client(" + arg0 + ") has been stopped.");
+				setPhase(null);
+				System.exit(0);
+			}
+
+			public void onStart(long arg0) {
+				logger.info("Client(" + arg0 + ") has been started.");
+				processId = arg0;
+			}
+
+			public void onDisconnect() {
+				logger.info("Client has been disconnected.Trying to reconnect...");
+				client.reconnect();
+			}
+
+			public void onConnect() {
+				logger.info("Client has been connected...");
+			}
+		});
+
+		if (prop.getProperty("mode.gui").equalsIgnoreCase("true")) {
+			final TesterMainGUI gui = new TesterMainGUI();
+			StateMachine.getInstance().setGui(gui);
+			try {
+				/*
+				 * GUI will start strategy
+				 */
+				 client.setSystemListener(new ISystemListener() {
+
+                     @Override
+                     public void onStart(long processId) {
+                             logger.info("Strategy started: " + processId);
+                             gui.updateButtons();
+                     }
+
+                     @Override
+                     public void onStop(long processId) {
+                             logger.info("Strategy stopped: " + processId);
+                             gui.resetButtons();
+                             if ( client instanceof ITesterClient ) {
+                            	 File reportFile = new File("/tmp/report.html");
+                            	 try {
+                                     ((ITesterClient)client).createReport(processId, reportFile);
+                            	 } catch (Exception e) {
+                                     logger.error(e.getMessage(), e);
+                            	 }
+                             }
+                             
+                             if (client.getStartedStrategies().size() == 0) {
+                                     // Do nothing
+                             }
+                     }
+
+                     @Override
+                     public void onConnect() {
+                             logger.info("Connected");
+                     }
+
+                     @Override
+                     public void onDisconnect() {
+                             // tester doesn't disconnect
+                     }
+             });
+				 gui.showChartFrame();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			if ( client instanceof ITesterClient ) {
+			((ITesterClient)client).startStrategy(StateMachine.getInstance(), new LoadingProgressListener() {
+				@Override
+				public void dataLoaded(long startTime, long endTime, long currentTime, String information) {
+				}
+
+				@Override
+				public void loadingFinished(boolean allDataLoaded, long startTime, long endTime, long currentTime) {
+				}
+
+				@Override
+				public boolean stopJob() {
+					return false;
+				}
+			}, gui, gui);
+			} else {
+				startStrategy();
+			}
+		} else {
+			/*
+			 * auto start, no GUI
+			 */
+			connectClient();
+			startStrategy();
+		}
+	}
+	
+	public static void connectClient() {
+		//setPhase("Connection");
+		try {
+			client.connect(prop.getProperty("account.jforex"), prop.getProperty("account.user"),
+					prop.getProperty("account.password"));
+		} catch (Exception e) {
+			logger.fatal(
+					"Cannot connect to " + prop.getProperty("account.jforex") + "@" + prop.getProperty("account.user"),
+					e);
+			closing();
+			return;
+		}
+		// wait for it to connect
+		int i = 50; // wait max ten seconds
+		while (i > 0 && !client.isConnected()) {
+			logger.debug("waiting for connection ...");
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				logger.fatal("Connection process has been aborted!", e);
+				closing();
+				return;
+			}
+			i--;
+		}
+		// workaround for LoadNumberOfCandlesAction for JForex-API versions
+		// >
+		// 2.6.64
+		try {
+			int ms = 5000;
+			logger.info("Waiting " + ms + "ms for candles to load.");
+			logger.debug("workaround: JForex-API versions 2.6.64.");
+			Thread.sleep(ms);
+		} catch (InterruptedException e) {
+			logger.error("Workaround for LoadNumberOfCandlesAction for JForex-API versions 2.6.64 has been aborted.", e);
+		}
+		logger.info("Number of candles loaded.");
+	}
+	
+	public static void startStrategy() {
+		setPhase("Strategy starting");
+		try {
+			client.startStrategy(StateMachine.getInstance(), new IStrategyExceptionHandler() {
+
+				@Override
+				public void onException(long strategyId, Source source, Throwable t) {
+					logger.fatal(source.toString());
+					closing();
+				}
+				
+			});
+		} catch (Exception e) {
+			logger.fatal("Cannot start strategy, possibly connection error or no strategy!", e);
+			closing();
+			return;
+		}
+		setPhase("Running");
 	}
 
 	private static void closing() {
@@ -234,45 +357,22 @@ public class Main {
 	}
 
 	public static void sendMail(String subject, String body) throws RobotException {
-		logger.info("Mail \"" + subject + "\" has been sent to " + prop.getProperty("account.email"));
-		// Recipient's email ID needs to be mentioned.
 		String to = prop.getProperty("account.email");
-
-		// Sender's email ID needs to be mentioned
 		String from = "fxrobot@fnf.hu";
-
-		// Assuming you are sending email from localhost
 		String host = "mail.fnf.hu";
-
-		// Get system properties
 		Properties properties = System.getProperties();
-
-		// Setup mail server
 		properties.setProperty("mail.smtp.host", host);
 
-		// Get the default Session object.
 		Session session = Session.getDefaultInstance(properties);
 
 		try {
-			// Create a default MimeMessage object.
 			MimeMessage message = new MimeMessage(session);
-
-			// Set From: header field of the header.
 			message.setFrom(new InternetAddress(from));
-
-			// Set To: header field of the header.
 			message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
-
-			// Set Subject: header field
 			message.setSubject(subject);
-
-			// Now set the actual message
 			message.setText(body);
-
-			// Send message
 			Transport.send(message);
-			System.out.println("Sent message successfully....");
-
+			logger.info("Mail \"" + subject + "\" has been sent to " + prop.getProperty("account.email"));
 		} catch (Exception err) {
 			throw new RobotException("Cannot send mail!", err);
 		}
@@ -312,8 +412,6 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 
 	@Override
 	public void setChartPanels(Map<IChart, ITesterGui> chartPanels) {
-		setTitle("Tester");
-
 		if (chartPanels != null && chartPanels.size() > 0) {
 			for (IChart chart : chartPanels.keySet()) {
 
@@ -323,21 +421,11 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 				// show ticks for EURUSD and 10 min bars for other instruments
 				IFeedDescriptor feedDescriptor = new FeedDescriptor();
 
-				// if ((new
-				// ScalpHolder7State()).getInstruments().contains(chart.getInstrument())
-				// &&
-				// !(new
-				// MACDSample452State()).getInstruments().contains(chart.getInstrument()))
-				// {
-				// feedDescriptor.setPeriod(Period.ONE_MIN);
-				// } else {
-				// feedDescriptor.setPeriod(Period.ONE_HOUR);
-				// }
-				feedDescriptor.setPeriod(Period.FOUR_HOURS);
+				feedDescriptor.setPeriod(Period.ONE_MIN);
 				feedDescriptor.setDataType(DataType.TIME_PERIOD_AGGREGATION);
 				feedDescriptor.setInstrument(chart.getInstrument());
-				feedDescriptor.setOfferSide(OfferSide.BID);
-				feedDescriptor.setFilter(Filter.WEEKENDS);
+//				feedDescriptor.setOfferSide(OfferSide.BID);
+//				feedDescriptor.setFilter(Filter.WEEKENDS);
 
 				chartPanels.get(chart).getTesterChartController().setFeedDescriptor(feedDescriptor);
 				chartPanels.get(chart).getTesterChartController().setChartAutoShift();
@@ -351,112 +439,6 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 	@Override
 	public void setExecutionControl(ITesterExecutionControl executionControl) {
 		this.executionControl = executionControl;
-	}
-
-	public void startStrategy() throws Exception {
-		// get the instance of the IClient interface
-		final ITesterClient client = TesterFactory.getDefaultInstance();
-		// set the listener that will receive system events
-		client.setSystemListener(new ISystemListener() {
-
-			@Override
-			public void onStart(long processId) {
-				logger.info("Strategy started: " + processId);
-				updateButtons();
-			}
-
-			@Override
-			public void onStop(long processId) {
-				logger.info("Strategy stopped: " + processId);
-				resetButtons();
-
-				File reportFile = new File("/tmp/report.html");
-				try {
-					client.createReport(processId, reportFile);
-				} catch (Exception e) {
-					logger.error(e.getMessage(), e);
-				}
-				if (client.getStartedStrategies().size() == 0) {
-					// Do nothing
-				}
-			}
-
-			@Override
-			public void onConnect() {
-				logger.info("Connected");
-			}
-
-			@Override
-			public void onDisconnect() {
-				// tester doesn't disconnect
-			}
-		});
-
-		logger.info("Connecting...");
-		// connect to the server using jnlp, user name and password
-		// connection is needed for data downloading
-		//client.connect(Main.jnlpUrl, Main.userName, "account.password");
-
-		// wait for it to connect
-		int i = 50; // wait max ten seconds
-		while (i > 0 && !client.isConnected()) {
-			Thread.sleep(1000);
-			i--;
-		}
-		if (!client.isConnected()) {
-			logger.error("Failed to connect Dukascopy servers");
-			System.exit(1);
-		}
-
-		// set instruments that will be used in testing
-		final Set<Instrument> instruments = new HashSet<Instrument>();
-		State startState = new SignalSeekerState();
-		for (State state : startState.getNextStates()) {
-			instruments.addAll(state.getInstruments());
-		}
-		logger.info("Subscribing instruments...");
-		client.setSubscribedInstruments(instruments);
-		for (Instrument inst : instruments) {
-			logger.debug("\t-" + inst.name());
-		}
-
-		// setting initial deposit
-		client.setInitialDeposit(Instrument.EURUSD.getSecondaryCurrency(), 500);
-		final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
-		dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
-
-		Date dateFrom = dateFormat.parse("01/01/2013 00:00:00");
-		Date dateTo = dateFormat.parse("11/31/2013 00:00:00");
-		client.setDataInterval(DataLoadingMethod.ALL_TICKS, dateFrom.getTime(), dateTo.getTime());
-		// client.setDataInterval(Period.FIFTEEN_MINS, OfferSide.BID,
-		// InterpolationMethod.CLOSE_TICK, dateFrom.getTime(),
-		// dateTo.getTime());
-		// load data
-		logger.info("Downloading data");
-		Future<?> future = client.downloadData(null);
-		// wait for downloading to complete
-		future.get();
-		// start the strategy
-		logger.info("Starting strategy");
-		/*
-		 * client.startStrategy( new SMAStrategy() );
-		 */
-
-		client.startStrategy(StateMachine.getInstance(), new LoadingProgressListener() {
-			@Override
-			public void dataLoaded(long startTime, long endTime, long currentTime, String information) {
-			}
-
-			@Override
-			public void loadingFinished(boolean allDataLoaded, long startTime, long endTime, long currentTime) {
-			}
-
-			@Override
-			public boolean stopJob() {
-				return false;
-			}
-		}, this, this);
-		// now it's running
 	}
 
 	/**
@@ -481,7 +463,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 
 		// this.currentChartPanel = chartPanel;
 		chartPanel.setPreferredSize(new Dimension(frameWidth, frameHeight - controlPanelHeight));
-		chartPanel.setMinimumSize(new Dimension(frameWidth, 200));
+		chartPanel.setMinimumSize(new Dimension(frameWidth, 150));
 		chartPanel.setMaximumSize(new Dimension(Short.MAX_VALUE, Short.MAX_VALUE));
 		getContentPane().add(chartPanel);
 		this.validate();
@@ -508,7 +490,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 				Runnable r = new Runnable() {
 					public void run() {
 						try {
-							startStrategy();
+							Main.connectClient();
 						} catch (Exception e2) {
 							logger.error(e2.getMessage(), e2);
 							e2.printStackTrace();
@@ -538,7 +520,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 			public void actionPerformed(ActionEvent e) {
 				if (executionControl != null) {
 					executionControl.continueExecution();
-					// updateButtons();
+					updateButtons();
 				}
 			}
 		});
@@ -549,7 +531,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 			public void actionPerformed(ActionEvent e) {
 				if (executionControl != null) {
 					executionControl.cancelExecution();
-					// updateButtons();
+					updateButtons();
 				}
 			}
 		});
@@ -565,7 +547,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 		cancelButton.setEnabled(false);
 	}
 
-	private void updateButtons() {
+	public void updateButtons() {
 		if (executionControl != null) {
 			startStrategyButton.setEnabled(executionControl.isExecutionCanceled());
 			pauseButton.setEnabled(!executionControl.isExecutionPaused() && !executionControl.isExecutionCanceled());
@@ -574,7 +556,7 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 		}
 	}
 
-	private void resetButtons() {
+	public void resetButtons() {
 		startStrategyButton.setEnabled(true);
 		pauseButton.setEnabled(false);
 		continueButton.setEnabled(false);
@@ -586,11 +568,5 @@ class TesterMainGUI extends JFrame implements ITesterUserInterface, ITesterExecu
 		centerFrame();
 		addControlPanel();
 		setVisible(true);
-	}
-
-	public void main(String[] args) throws Exception {
-		// startStrategy();
-		TesterMainGUI testerMainGUI = new TesterMainGUI();
-		testerMainGUI.showChartFrame();
 	}
 }

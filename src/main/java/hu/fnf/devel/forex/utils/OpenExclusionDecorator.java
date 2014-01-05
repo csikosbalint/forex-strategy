@@ -6,15 +6,15 @@ import com.dukascopy.api.IBar;
 import com.dukascopy.api.ITick;
 import com.dukascopy.api.Period;
 
-public abstract class ExclusionDecorator implements Criterion {
+public abstract class OpenExclusionDecorator implements Criterion {
 	/*
 	 * flow through the max and the cacl if not exluded
 	 * break the chain if exluded
 	 */
-	protected static final Logger logger = Logger.getLogger(ExclusionDecorator.class);
+	protected static final Logger logger = Logger.getLogger(OpenExclusionDecorator.class);
 	protected Criterion criterion;
 
-	public ExclusionDecorator(Criterion criterion) {
+	public OpenExclusionDecorator(Criterion criterion) {
 		this.criterion = criterion;
 	}
 

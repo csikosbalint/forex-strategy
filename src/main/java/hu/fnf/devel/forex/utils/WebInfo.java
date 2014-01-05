@@ -16,14 +16,20 @@ public class WebInfo implements Info {
 	private static final Logger logger = Logger.getLogger(WebInfo.class);
 	private Info marketInfo;
 	private Thread retriveThread;
-	private boolean retrieving = false;
+	private boolean freshData = false;
+	
+	public WebInfo() {
+		logger.info("Web information has been instantiated!");
+		refreshData();
+	}
 
 	@Override
 	public boolean isMarketOpen(String market) {
-		// IEngine.Type getType()
+		/*
+		 * test
+		 */
 		if (StateMachine.getInstance().getContext().getEngine().getType().equals(IEngine.Type.TEST)) {
-			// if last tick on EURUSD is outdated, than something very bad thing
-			// has happened
+			// if last tick on EURUSD is outdated, than something very bad thing has happened
 			int hour = 0;
 			int day = 0;
 			try {
@@ -50,36 +56,39 @@ public class WebInfo implements Info {
 				day = calendar.get(Calendar.DAY_OF_WEEK);
 			}
 			if ( day == Calendar.SATURDAY || day == Calendar.SUNDAY ) {
-//				Main.massInfo(logger, "weekend");
 				return false;
 			}
 			
 			if ( 22 < hour || hour < 8 ) {
-//				Main.massInfo(logger, "closed at " + hour + "h.");
 				return false;
 			}
 			return true;
 		}
-
+		/*
+		 * live, demo
+		 */
 		if (marketInfo != null) {
 			return marketInfo.isMarketOpen(market);
-		} else if (!retrieving) {
-			retriveThread = new Thread(new Runnable() {
-
-				@Override
-				public void run() {
-					try {
-						marketInfo = new MarketWebProxy();
-					} catch (IOException e) {
-						return;
-					}
-				}
-			});
-			retriveThread.start();
-			retrieving = retriveThread.isAlive();
+		} else if (!freshData) {
+			refreshData();
 		}
-		//Main.massDebug(logger, "Until info download is finished false information will be returned.");
 		return false;
+	}
+
+	private void refreshData() {
+		retriveThread = new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				try {
+					marketInfo = MarketWebProxy.getInstance();
+				} catch (IOException e) {
+					return;
+				}
+			}
+		});
+		retriveThread.start();
+		freshData = retriveThread.isAlive();
 	}
 
 }

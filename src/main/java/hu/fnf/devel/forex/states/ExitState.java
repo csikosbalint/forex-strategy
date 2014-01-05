@@ -1,7 +1,6 @@
 package hu.fnf.devel.forex.states;
 
-import java.util.HashSet;
-import java.util.Set;
+import org.apache.log4j.Logger;
 
 import com.dukascopy.api.IBar;
 import com.dukascopy.api.ITick;
@@ -14,8 +13,20 @@ import hu.fnf.devel.forex.utils.Signal;
 import hu.fnf.devel.forex.utils.State;
 
 public class ExitState extends State {
+	private static final Logger logger = Logger.getLogger(ExitState.class);
+	/*
+	 * singleton
+	 */
+	private static ExitState instance;
 
-	public ExitState() {
+	public synchronized static ExitState getInstance() {
+		if (instance == null) {
+			instance = new ExitState();
+		}
+		return instance;
+	}
+	
+	private ExitState() {
 		super("ExitState");
 	}
 
@@ -58,12 +69,6 @@ public class ExitState extends State {
 			throws JFException {
 		// TODO Auto-generated method stub
 		return null;
-	}
-
-	@Override
-	public Set<State> getNextStates() {
-		Set<State> nextstates = new HashSet<State>();
-		return nextstates;
 	}
 
 	@Override

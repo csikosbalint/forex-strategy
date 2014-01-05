@@ -6,10 +6,10 @@ import java.util.Map;
 
 import hu.fnf.devel.forex.Main;
 import hu.fnf.devel.forex.utils.Criterion;
-import hu.fnf.devel.forex.utils.ExclusionDecorator;
+import hu.fnf.devel.forex.utils.OpenExclusionDecorator;
 import hu.fnf.devel.forex.utils.Signal;
 
-public class MarketCriterion extends ExclusionDecorator {
+public class MarketOpenTimeExclusion extends OpenExclusionDecorator {
 	String lastd;
 	String lasti;
 	/*
@@ -23,7 +23,7 @@ public class MarketCriterion extends ExclusionDecorator {
 		instStockMap.put("JPY", "Tokyo");
 	}
 
-	public MarketCriterion(Criterion criterions) {
+	public MarketOpenTimeExclusion(Criterion criterions) {
 		super(criterions);
 	}
 

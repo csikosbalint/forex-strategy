@@ -30,12 +30,12 @@ public class Scalp7Close extends CloseCriterionDecorator {
 
 	@Override
 	protected double calc(Signal challenge, ITick tick, State actual) {
-		IIndicators indicators = StateMachine.getInstance().getContext().getIndicators();
-		/*
-		 * close strategy
-		 */
+		int c = 2; // the START#ID order and this
+		if ( StateMachine.getInstance().getContext().getEngine().getType().equals(IEngine.Type.TEST) ) {
+			c--;
+		}
 		try {
-			if (StateMachine.getInstance().getContext().getEngine().getOrders().size() < 2) {
+			if (StateMachine.getInstance().getContext().getEngine().getOrders().size() < c) {
 				return 0;
 			}
 		} catch (JFException e1) {
@@ -51,6 +51,7 @@ public class Scalp7Close extends CloseCriterionDecorator {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		IIndicators indicators = StateMachine.getInstance().getContext().getIndicators();
 		if (order.getOrderCommand() == IEngine.OrderCommand.BUY) {
 			try {
 				center = indicators.bbands(challenge.getInstrument(), challenge.getPeriod(), OfferSide.ASK,

@@ -6,15 +6,15 @@ import com.dukascopy.api.OfferSide;
 
 import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.utils.Criterion;
-import hu.fnf.devel.forex.utils.ExclusionDecorator;
+import hu.fnf.devel.forex.utils.OpenExclusionDecorator;
 import hu.fnf.devel.forex.utils.Signal;
 
-public class TrendADXCriterion extends ExclusionDecorator {
+public class TrendADXExclusion extends OpenExclusionDecorator {
 
 	private int trend;
 	private int limit = 25;
 
-	public TrendADXCriterion(Criterion criterion, int trend) {
+	public TrendADXExclusion(Criterion criterion, int trend) {
 		super(criterion);
 
 		this.trend = trend;

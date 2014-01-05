@@ -2,14 +2,14 @@ package hu.fnf.devel.forex.criteria;
 
 import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.utils.Criterion;
-import hu.fnf.devel.forex.utils.ExclusionDecorator;
+import hu.fnf.devel.forex.utils.OpenExclusionDecorator;
 import hu.fnf.devel.forex.utils.Signal;
 
 import com.dukascopy.api.IHistory;
 import com.dukascopy.api.IOrder;
 import com.dukascopy.api.JFException;
 
-public class BadLuckPanic extends ExclusionDecorator {
+public class BadLuckPanicExclusion extends OpenExclusionDecorator {
 	/*
 	 * OPEN exlusion
 	 */
@@ -17,7 +17,7 @@ public class BadLuckPanic extends ExclusionDecorator {
 	private int trades;
 	private int days;
 
-	public BadLuckPanic(Criterion criterion, int days, int trades) {
+	public BadLuckPanicExclusion(Criterion criterion, int days, int trades) {
 		super(criterion);
 		this.days = days;
 		this.trades = trades;

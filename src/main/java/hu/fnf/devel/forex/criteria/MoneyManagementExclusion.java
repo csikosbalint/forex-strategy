@@ -2,13 +2,13 @@ package hu.fnf.devel.forex.criteria;
 
 import hu.fnf.devel.forex.StateMachine;
 import hu.fnf.devel.forex.utils.Criterion;
-import hu.fnf.devel.forex.utils.ExclusionDecorator;
+import hu.fnf.devel.forex.utils.CloseExclusionDecorator;
 import hu.fnf.devel.forex.utils.Signal;
 
 import com.dukascopy.api.IOrder;
 import com.dukascopy.api.JFException;
 
-public class MoneyManagement extends ExclusionDecorator {
+public class MoneyManagementExclusion extends CloseExclusionDecorator {
 	/*
 	 * config
 	 */
@@ -21,7 +21,7 @@ public class MoneyManagement extends ExclusionDecorator {
 	double u_limit;
 	double l_limit;
 
-	public MoneyManagement(Criterion criterion) {
+	public MoneyManagementExclusion(Criterion criterion) {
 		super(criterion);
 	}
 
