@@ -34,6 +34,7 @@ import org.apache.log4j.PropertyConfigurator;
 
 import com.dukascopy.api.DataType;
 import com.dukascopy.api.IChart;
+import com.dukascopy.api.IEngine;
 import com.dukascopy.api.IOrder;
 import com.dukascopy.api.Instrument;
 import com.dukascopy.api.LoadingProgressListener;
@@ -357,25 +358,27 @@ public class Main {
 	}
 
 	public static void sendMail(String subject, String body) throws RobotException {
-		String to = prop.getProperty("account.email");
-		String from = "fxrobot@fnf.hu";
-		String host = "mail.fnf.hu";
-		Properties properties = System.getProperties();
-		properties.setProperty("mail.smtp.host", host);
+		if ( !StateMachine.getInstance().getContext().getEngine().getType().equals(IEngine.Type.TEST) ) {	
+			String to = prop.getProperty("account.email");
+			String from = "fxrobot@fnf.hu";
+			String host = "mail.fnf.hu";
+			Properties properties = System.getProperties();
+			properties.setProperty("mail.smtp.host", host);
 
-		Session session = Session.getDefaultInstance(properties);
+			Session session = Session.getDefaultInstance(properties);
 
-		try {
-			MimeMessage message = new MimeMessage(session);
-			message.setFrom(new InternetAddress(from));
-			message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
-			message.setSubject(subject);
-			message.setText(body);
-			Transport.send(message);
-			logger.info("Mail \"" + subject + "\" has been sent to " + prop.getProperty("account.email"));
-		} catch (Exception err) {
-			throw new RobotException("Cannot send mail!", err);
+			try {
+				MimeMessage message = new MimeMessage(session);
+				message.setFrom(new InternetAddress(from));
+				message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
+				message.setSubject(subject);
+				message.setText(body);
+				Transport.send(message);
+			} catch (Exception err) {
+				throw new RobotException("Cannot send mail!", err);
+			}
 		}
+		logger.info("Mail \"" + subject + "\" has been sent to " + prop.getProperty("account.email"));
 	}
 
 	public static void printDetails(IOrder iOrder) {

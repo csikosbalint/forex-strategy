@@ -30,13 +30,13 @@ public class MACDCloseCriterion extends CloseCriterionDecorator {
 
 	@Override
 	protected double calc(Signal challenge, ITick tick, State actual) {
-		int c = 2; // the START#ID order and this
+		int maxOrder = 2; // the START#ID order and this
 		if ( StateMachine.getInstance().getContext().getEngine().getType().equals(IEngine.Type.TEST) ) {
-			c--;
+			maxOrder--;
 		}
 		IOrder order = null;
 		try {
-			if (StateMachine.getInstance().getContext().getEngine().getOrders().size() < c) {
+			if (StateMachine.getInstance().getContext().getEngine().getOrders().size() < maxOrder) {
 				return 0;
 			}
 			for (IOrder oIOrder : StateMachine.getInstance().getContext().getEngine().getOrders() ) {
@@ -116,14 +116,14 @@ public class MACDCloseCriterion extends CloseCriterionDecorator {
 
 				if (MacdCurrent[0] < 0) {
 					if (MacdPrevPrev[0] < MacdPrevious[0]) {
-						// logger.debug(MacdCurrent[2]);
 						if (SignalPrevPrev > SignalPrevious) {
-							// logger.debug(SignalPrevPrev + " > " +
-							// SignalPrevious);
 							if (Math.signum(MacdCurrent[2]) != Math.signum(MacdPrevious[2])) {
-								// logger.debug("Math.signum(MacdCurrent[2]) != Math.signum(MacdPrevious[2]");
 								if (SignalCurrent < 0 && MacdCurrent[0] < -1 * (MACDCloseLevel * challenge.getInstrument().getPipValue())) {
-									// logger.debug("5");
+									logger.debug("MacdCurrent[0] < 0				:	" + MacdCurrent[2] + " < 0" );
+									logger.debug("MacdPrevPrev[0] < MacdPrevious[0]	:	" + MacdPrevPrev[0] + "<" + MacdPrevious[0] );
+									logger.debug("SignalPrevPrev > SignalPrevious   :	" + 	SignalPrevPrev +  "<" + SignalPrevious );
+									logger.debug("Math.signum(MacdCurrent[2]) != Math.signum(MacdPrevious[2]");
+									logger.debug(SignalPrevPrev + " > " + SignalPrevious);
 									return this.max;
 								}
 							}
