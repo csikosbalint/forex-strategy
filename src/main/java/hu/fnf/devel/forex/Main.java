@@ -77,7 +77,7 @@ public class Main {
                 return prop.getProperty( key );
         }
 
-        public static void main( String[] args ) {
+        public static void main( String[] args ) throws Exception {
         /*
          * SIGTERM signal catch
 		 */
@@ -94,7 +94,6 @@ public class Main {
         /*
          * config parse
 		 */
-
                 if ( args.length > 0 ) {
                         try {
                                 prop.load( new FileInputStream( args[0] ) );
@@ -106,17 +105,17 @@ public class Main {
                         System.out.println( "Config parameter is necessary!" );
                         System.exit( -1 );
                 }
+                logger.info( " -------- Forex robot v" + VERSION + " written by johnnym --------" );
+
+                setPhase( "Configuration" );
                 logger.info( "Using config file: " + args[0] );
                 for ( Object key : prop.keySet() ) {
-                        if ( key.toString().contains( "password" ) || key.toString().contains( "log4j" ) ) {
+                        if ( key.toString().contains( "assword" ) ) {
                                 continue;
                         }
                         logger.info( "\t" + key.toString() + "\t=\t" + prop.get( key ) );
                 }
 
-                logger.info( "Forex robot written by johnnym" );
-
-                logger.info( "Version: " + VERSION );
                 logger.info( "Account: " + prop.getProperty( "account.user" ) );
                 setPhase( "Initalization" );
         /*
@@ -126,7 +125,7 @@ public class Main {
         /*
          * LIVE, DEMO, TEST mode
 		 */
-                if ( prop.getProperty( "account.type" ).equalsIgnoreCase( "test" ) ) {
+                if ( prop.getProperty( "test.mode" ).equalsIgnoreCase( "true" ) ) {
             /*
              * tester instance
 			 */
@@ -151,8 +150,8 @@ public class Main {
                         final SimpleDateFormat dateFormat = new SimpleDateFormat( "MM/dd/yyyy HH:mm:ss" );
                         dateFormat.setTimeZone( TimeZone.getTimeZone( "GMT" ) );
                         try {
-                                Date dateFrom = dateFormat.parse( prop.getProperty( "mode.test.from" ) );
-                                Date dateTo = dateFormat.parse( prop.getProperty( "mode.test.till" ) );
+                                Date dateFrom = dateFormat.parse( prop.getProperty( "test.from" ) );
+                                Date dateTo = dateFormat.parse( prop.getProperty( "test.till" ) );
 
                                 ((ITesterClient)client).setDataInterval( DataLoadingMethod.TICKS_WITH_TIME_INTERVAL, dateFrom.getTime(),
                                                                          dateTo.getTime() );
@@ -165,8 +164,10 @@ public class Main {
                                 // wait for downloading to complete
                                 future.get();
                         } catch ( Exception e ) {
-                                logger.fatal( "Cannot retreive data for testing!", e );
-                                System.exit( -1 );
+                                logger.fatal( "Cannot retreive data for testing!" );
+                                logger.fatal( "Config error: test.from and test.till must be configure for testing in the format of MM/dd/yyyy HH:mm:ss" );
+                                closing();
+                                throw new Exception( "Config error: test.from and test.till must be configure for testing in the format of MM/dd/yyyy HH:mm:ss", e );
                         }
                 } else {
             /*
@@ -202,7 +203,7 @@ public class Main {
                         }
                 } );
 
-                if ( prop.getProperty( "mode.gui" ).equalsIgnoreCase( "true" ) ) {
+                if ( prop.getProperty( "account.gui" ).equalsIgnoreCase( "true" ) ) {
                         final TesterMainGUI gui = new TesterMainGUI();
                         StateMachine.getInstance().setGui( gui );
                         try {
@@ -269,26 +270,21 @@ public class Main {
                                 startStrategy();
                         }
                 } else {
-            /*
-             * auto start, no GUI
-			 */
                         connectClient();
-                        startStrategy();
+                        try {
+                                startStrategy();
+                        } catch ( Exception e ) {
+                                closing();
+                                throw new Exception( e );
+                        }
                 }
         }
 
-        public static void connectClient() {
-                //setPhase("Connection");
-                try {
-                        client.connect( prop.getProperty( "account.jforex" ), prop.getProperty( "account.user" ),
-                                        prop.getProperty( "account.password" ) );
-                } catch ( Exception e ) {
-                        logger.fatal(
-                                "Cannot connect to " + prop.getProperty( "account.jforex" ) + "@" + prop.getProperty( "account.user" ),
-                                e );
-                        closing();
-                        return;
-                }
+        public static void connectClient() throws Exception {
+                setPhase( "Connection" );
+                client.connect( prop.getProperty( "network.jnpl" ), prop.getProperty( "account.user" ),
+                                prop.getProperty( "account.password" ) );
+
                 // wait for it to connect
                 int i = 50; // wait max ten seconds
                 while ( i > 0 && !client.isConnected() ) {
@@ -302,37 +298,22 @@ public class Main {
                         }
                         i--;
                 }
-                // workaround for LoadNumberOfCandlesAction for JForex-API versions
-                // >
-                // 2.6.64
-                try {
-                        int ms = 5000;
-                        logger.info( "Waiting " + ms + "ms for candles to load." );
-                        logger.debug( "workaround: JForex-API versions 2.6.64." );
-                        Thread.sleep( ms );
-                } catch ( InterruptedException e ) {
-                        logger.error( "Workaround for LoadNumberOfCandlesAction for JForex-API versions 2.6.64 has been aborted.", e );
-                }
                 logger.info( "Number of candles loaded." );
         }
 
         public static void startStrategy() {
                 setPhase( "Strategy starting" );
-                try {
-                        client.startStrategy( StateMachine.getInstance(), new IStrategyExceptionHandler() {
 
-                                @Override
-                                public void onException( long strategyId, Source source, Throwable t ) {
-                                        logger.fatal( source.toString() );
-                                        closing();
-                                }
+                client.startStrategy( StateMachine.getInstance(), new IStrategyExceptionHandler() {
 
-                        } );
-                } catch ( Exception e ) {
-                        logger.fatal( "Cannot start strategy, possibly connection error or no strategy!", e );
-                        closing();
-                        return;
-                }
+                        @Override
+                        public void onException( long strategyId, Source source, Throwable t ) {
+                                // throw t
+                                closing();
+                        }
+
+                } );
+
                 setPhase( "Running" );
         }
 
