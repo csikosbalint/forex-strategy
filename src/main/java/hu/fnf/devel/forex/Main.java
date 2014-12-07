@@ -50,9 +50,7 @@ public class Main {
         private static IClient client;
         private static long processId;
         private static Info info;
-        /**
-         * logging variables
-         */
+
         private static String phase;
 
         public static String getPhase() {
@@ -105,7 +103,7 @@ public class Main {
                         System.out.println( "Config parameter is necessary!" );
                         System.exit( -1 );
                 }
-                logger.info( " -------- Forex robot v" + VERSION + " written by johnnym --------" );
+                logger.info( "-------- Forex robot v" + VERSION + " written by johnnym --------" );
 
                 setPhase( "Configuration" );
                 logger.info( "Using config file: " + args[0] );
@@ -113,7 +111,7 @@ public class Main {
                         if ( key.toString().contains( "assword" ) ) {
                                 continue;
                         }
-                        logger.info( "\t" + key.toString() + "\t=\t" + prop.get( key ) );
+                        logger.debug( "\t" + key.toString() + "\t=\t" + prop.get( key ) );
                 }
 
                 logger.info( "Account: " + prop.getProperty( "account.user" ) );

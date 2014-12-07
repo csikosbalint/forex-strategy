@@ -1,72 +1,39 @@
 package hu.fnf.devel.forex;
 
-import hu.fnf.devel.forex.states.ExitState;
-import hu.fnf.devel.forex.states.MACDSample452State;
-import hu.fnf.devel.forex.states.PanicState;
-import hu.fnf.devel.forex.states.ScalpHolder7State;
-import hu.fnf.devel.forex.states.SignalSeekerState;
-import hu.fnf.devel.forex.states.ThreeLittlePigsState;
+import com.dukascopy.api.*;
+import com.dukascopy.api.IEngine.OrderCommand;
+import com.dukascopy.api.system.IClient;
+import hu.fnf.devel.forex.states.*;
 import hu.fnf.devel.forex.utils.RobotException;
 import hu.fnf.devel.forex.utils.Signal;
 import hu.fnf.devel.forex.utils.State;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.Stack;
-
-import javax.swing.JFrame;
-
 import org.apache.log4j.Logger;
 
-import com.dukascopy.api.IAccount;
-import com.dukascopy.api.IBar;
-import com.dukascopy.api.IChart;
-import com.dukascopy.api.IContext;
-import com.dukascopy.api.IEngine;
-import com.dukascopy.api.IEngine.OrderCommand;
-import com.dukascopy.api.IMessage;
-import com.dukascopy.api.IOrder;
-import com.dukascopy.api.IStrategy;
-import com.dukascopy.api.ITick;
-import com.dukascopy.api.Instrument;
-import com.dukascopy.api.JFException;
-import com.dukascopy.api.Period;
-import com.dukascopy.api.system.IClient;
+import javax.swing.*;
+import java.util.*;
 
 public class StateMachine implements IStrategy {
-	private static final Logger logger = Logger.getLogger(StateMachine.class);
-
 	public static final int OPEN = 1;
 	public static final int CLOSE = 2;
 	public static final int TREND = 3;
 	public static final int CHAOS = 4;
-	
 	public static final int ADD = 1;
 	public static final int UPDATE = 2;
 	public static final int REMOVE = 3;
-	
 	public static final double BRAVE_VALUE = 0.6;
+		private static final Logger logger = Logger.getLogger( StateMachine.class );
 	private static final int maxOrderResubmitCount = 5;
-
+		public static Map<IOrder, Integer> resubmitAttempts = new HashMap<IOrder, Integer>();
 	private static StateMachine instance;
 	private static State state;
 	private static State nextState;
 	private static Set<State> allStates = new HashSet<State>();
 	private static boolean stateLock = false;
-	
 	private IContext context;
-	
 	private double 	startBalance;
 	private int		startID;
-
 	private Collection<IChart> charts = new ArrayList<IChart>();
 	private JFrame gui;
-	public static Map<IOrder, Integer> resubmitAttempts = new HashMap<IOrder, Integer>();
 	
  	/*
 	 * THREAD SAFE!!!
@@ -164,13 +131,8 @@ public class StateMachine implements IStrategy {
 	 * static
 	 */
 
-	public static void setNextState(State nextState) throws RobotException {
-		if (!isStateLock()) {
-			setStateLock(true);
-			StateMachine.nextState = nextState;
-		} else {
-			throw new RobotException("State change in progress. Next state is alredy locked!");
-		}
+		public static Set<State> getAllStates() {
+				return allStates;
 	}
 	
 	/*
@@ -181,16 +143,38 @@ public class StateMachine implements IStrategy {
 	/*
 	 * public
 	 */
-	
+
+		public static State getNextState() {
+				return nextState;
+		}
+
+		public static void setNextState( State nextState ) throws RobotException {
+				if ( !isStateLock() ) {
+						setStateLock( true );
+						StateMachine.nextState = nextState;
+				} else {
+						throw new RobotException( "State change in progress. Next state is alredy locked!" );
+				}
+		}
+
+		public static boolean isStateLock() {
+				return stateLock;
+		}
+
+		public static void setStateLock( boolean stateLock ) {
+				StateMachine.stateLock = stateLock;
+		}
+
 	public void setGui(JFrame gui) {
 		this.gui = gui;
 	}
+
 	public void stateTraversal(State s) {
 		if ( s == null ) {
 			try {
-				s = StateMachine.getStateInstance(Main.getProperty("start.state"));
+					s = StateMachine.getStateInstance( Main.getProperty( "state.start" ) );
 			} catch ( RobotException e) {
-				logger.fatal("No \"start.state\" defined or no state like \"" + Main.getProperty("start.state") + "\"");
+					logger.fatal( "No \"start.state\" defined or no state like \"" + Main.getProperty( "state.start" ) + "\"" );
 				return;
 			}
 		}
@@ -202,44 +186,28 @@ public class StateMachine implements IStrategy {
 			if ( !done.contains(pick) ) {
 				done.add(pick);
 				logger.debug("visit: " + pick.getName());
-				if ( pick.getNextStates() != null && !todo.containsAll(pick.getNextStates())) { 
+					if ( pick.getNextStates() != null && !todo.containsAll( pick.getNextStates() ) ) {
 					todo.addAll(pick.getNextStates());
 				}
 			}
 		}
-	}
-	
-	public static Set<State> getAllStates() {
-		return allStates;
-	}
-	
-	public void setStartBalance(double startBalance) {
-		this.startBalance = startBalance;
 	}
 
 	public double getStartBalance() {
 		return startBalance;
 	}
 
-	public static void setState(State state) {
-		StateMachine.state = state;
-		setStateLock(false);
+		public void setStartBalance( double startBalance ) {
+				this.startBalance = startBalance;
 	}
 
 	public State getState() {
 		return state;
 	}
 
-	public static State getNextState() {
-		return nextState;
-	}
-
-	public static boolean isStateLock() {
-		return stateLock;
-	}
-
-	public static void setStateLock(boolean stateLock) {
-		StateMachine.stateLock = stateLock;
+		public static void setState( State state ) {
+				StateMachine.state = state;
+				setStateLock( false );
 	}
 
 	public Period getPeriod(IOrder order) {
